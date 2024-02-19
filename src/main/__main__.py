@@ -1,5 +1,6 @@
 import argparse
-
+from src.parser.Parser import Parser
+from src.parser.DotExporter import DotExporter
 
 parser: argparse.ArgumentParser = argparse.ArgumentParser(prog="C-Compiler")
 parser.add_argument("--input", help="input file", required=True)
@@ -16,6 +17,12 @@ if __name__ == "__main__":
     symb_file = args.render_symb
     target_llvm = args.target_llvm
     target_mips = args.target_mips
+
+    # Generate CST
+    cst = Parser.parse(input_file)
+
+    # Render CST
+    DotExporter.export(cst, "output")
 
     if ast_file:
         # TODO: Implement AST renderer
