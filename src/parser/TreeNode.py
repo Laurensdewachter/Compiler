@@ -49,6 +49,10 @@ class GtNode(TreeNode):
     def __init__(self, children=None, line_nr: int = None):
         super().__init__(">", children=children, line_nr=line_nr)
 
+class NeqNode(TreeNode):
+    def __init__(self, children=None, line_nr: int = None):
+        super().__init__("!=", children=children, line_nr=line_nr)
+
 
 class LtNode(TreeNode):
     def __init__(self, children=None, line_nr: int = None):

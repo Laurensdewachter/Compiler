@@ -48,10 +48,39 @@ class Parser:
 
     @staticmethod
     def convert_to_ast(cst: TreeNode) -> TreeNode:
+
+        # Remove all statements that have only one child except for some specific ones
+        if len(cst.children) > 0:
+            for child in cst.children:
+                if len(child.children) == 1:
+                    new_child = child.children[0]
+                    if not isinstance(child, (StatNode, ProgNode)):
+                        idx = cst.children.index(child)
+                        cst.children[idx] = new_child
+
+        for child in cst.children:
+            Parser.convert_to_ast(child)
+
         return cst
 
 
-operator_signs = {"+", "-", "*", "/", "<", ">", "==", "&&", "||", ">=", "<=", "!=", "%"}
+operator_signs = {
+    "+",
+    "-",
+    "*",
+    "/",
+    "<",
+    ">",
+    "==",
+    "&&",
+    "||",
+    ">=",
+    "<=",
+    "!=",
+    "%",
+    ">>",
+    "<<",
+}
 
 
 class ASTVisitor(CVisitor):
@@ -82,6 +111,55 @@ class ASTVisitor(CVisitor):
             if cstChild is None:
                 continue
             children.append(cstChild)
+
+        # Check which expression
+        if len(children) == 3:
+            middle = children[1]
+            if isinstance(middle, PlusNode):
+                return PlusNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+            elif isinstance(middle, MinusNode):
+                return MinusNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+            elif isinstance(middle, MultNode):
+                return MultNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+            elif isinstance(middle, DivNode):
+                return DivNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+            elif isinstance(middle, ModNode):
+                return ModNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+            elif isinstance(middle, LShiftNode):
+                return LShiftNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+            elif isinstance(middle, RShiftNode):
+                return RShiftNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+            elif isinstance(middle, AddressNode):
+                return BitAndNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+            elif isinstance(middle, BitOrNode):
+                return BitOrNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+            elif isinstance(middle, BitXorNode):
+                return BitXorNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+            elif isinstance(middle, BitNotNode):
+                return BitNotNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+
 
         return ExprNode(line_nr=ctx.start.line, children=children)
 
@@ -158,6 +236,12 @@ class ASTVisitor(CVisitor):
                     return MultNode(line_nr=node.symbol.line)
                 case "/":
                     return DivNode(line_nr=node.symbol.line)
+                case "%":
+                    return ModNode(line_nr=node.symbol.line)
+                case ">>":
+                    return RShiftNode(line_nr=node.symbol.line)
+                case "<<":
+                    return LShiftNode(line_nr=node.symbol.line)
                 # TODO: Add more cases
         match node.symbol.type:
             case CParser.INT:
@@ -170,5 +254,11 @@ class ASTVisitor(CVisitor):
                 return IdNode(text, line_nr=node.symbol.line)
             case CParser.POINTER:
                 return PointerNode(text, line_nr=node.symbol.line)
-            case CParser.ADDRESS:
+            case CParser.AMPERSAND:
                 return AddressNode(text, line_nr=node.symbol.line)
+            case CParser.BITOR:
+                return BitOrNode(text, line_nr=node.symbol.line)
+            case CParser.BITXOR:
+                return BitXorNode(text, line_nr=node.symbol.line)
+            case CParser.BITNOT:
+                return BitNotNode(text, line_nr=node.symbol.line)
