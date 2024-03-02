@@ -14,7 +14,8 @@ stat:
     | COMMENT;
 
 expr:
-	expr ('*' | '/') expr
+	expr ('*') expr
+	| expr ('/') expr
 	| expr '%' expr
 	| expr ('+' | '-') expr
 	| ('!' | '-' | '+') expr
@@ -26,27 +27,29 @@ expr:
 	| pointer
 	| address
 	| variable
-	| '(' expr ')'
+	| LPAREN expr RPAREN
 	| ('++' | '--') expr
 	| expr ('++' | '--')
-	| expr '&&' expr;
-
+	| expr '&&' expr
+	| expr LSHIFT expr
+	| expr RSHIFT expr
+	| expr AMPERSAND expr
+	| expr BITOR expr
+	| expr BITXOR expr
+	| expr BITNOT expr;
 
 variable: ID;
 
 newVariable:
 	CONST* TYPE variable
-	| CONST* TYPE variable '=' expr
-	| CONST* TYPE pointer '=' address
-	| CONST* TYPE pointer '=' ID;
+	| CONST* TYPE variable '=' expr;
 
 pointer: POINTER+ variable;
 
-address: ADDRESS ID;
+address: AMPERSAND ID;
 
 assignment:
-	POINTER* variable '=' expr
-	| POINTER* ID '=' expr
+	ID '=' expr
 	| expr '=' expr;
 
 TYPE: 'int' | 'float' | 'char' | 'string' | 'bool' | 'void';
@@ -69,6 +72,7 @@ LBRACKET: '{';
 RBRACKET: '}';
 LPAREN: '(';
 RPAREN: ')';
+POINTER: '*';
 CONST: 'const';
 SQUOTE: ['];
 DQUOTE: ["];
@@ -77,7 +81,11 @@ CHAR: SQUOTE . SQUOTE | SQUOTE '\\' . SQUOTE;
 ID: [_a-zA-Z][_a-zA-Z0-9.]*;
 BOOL: 'true' | 'false';
 FLOAT: [-]?[0-9]* '.' [0-9]*;
-INT: [-]?[1-9][0-9]* | '0';
+INT: ('-')? [0-9]+; // TODO: handle '+' before an integer
 STRING: ["] .*? ["];
-POINTER: '*';
-ADDRESS: '&';
+LSHIFT: '<<';
+RSHIFT: '>>';
+AMPERSAND: '&';
+BITOR: '|';
+BITXOR: '^';
+BITNOT: '~';
