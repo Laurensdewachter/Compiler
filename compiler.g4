@@ -8,6 +8,7 @@ COMMENT: '/*' .*? '*/';
 
 stat:
 	expr SEMI
+	| main
 	| newVariable SEMI
     | assignment SEMI
     | LINE_COMMENT
@@ -39,6 +40,8 @@ expr:
 	| expr BITNOT expr;
 
 variable: ID;
+
+main: TYPE 'main' LPAREN RPAREN LBRACKET stat* RBRACKET;
 
 newVariable:
 	CONST* TYPE variable
