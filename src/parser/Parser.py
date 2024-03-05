@@ -1,6 +1,6 @@
 from antlr4 import *
 from ..antlr_files.compilerLexer import compilerLexer as CLexer
-from ..antlr_files.compilerParser import compilerParser as CParser
+from ..antlr_files.compilerParser import compilerParser as CParser, compilerParser
 from antlr4.error.ErrorListener import ErrorListener, ConsoleErrorListener
 from ..antlr_files.compilerVisitor import compilerVisitor as CVisitor
 
@@ -64,6 +64,16 @@ class ASTVisitor(CVisitor):
             children.append(cstChild)
 
         return ProgNode(line_nr=ctx.start.line, children=children)
+
+    def visitMain(self, ctx: compilerParser.MainContext):
+        children = []
+        for child in ctx.children:
+            cstChild = self.visit(child)
+            if cstChild is None:
+                continue
+            children.append(cstChild)
+
+        return MainNode(line_nr=ctx.start.line, children=children)
 
     def visitStat(self, ctx: CParser.StatContext):
         children = []

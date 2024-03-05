@@ -9,6 +9,10 @@ class ProgNode(TreeNode):
     def __init__(self, children=None, line_nr: int = None):
         super().__init__("Prog", children=children, line_nr=line_nr)
 
+class MainNode(TreeNode):
+    def __init__(self, children=None, line_nr: int = None):
+        super().__init__("Main", children=children, line_nr=line_nr)
+
 
 class StatNode(TreeNode):
     def __init__(self, children=None, line_nr: int = None):
