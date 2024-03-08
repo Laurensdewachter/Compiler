@@ -18,15 +18,11 @@ if __name__ == "__main__":
     target_llvm = args.target_llvm
     target_mips = args.target_mips
 
-    # Generate CST
-    cst = Parser.parse(input_file)
-
-    # Render CST
-    DotExporter.export(cst, "output")
+    # Generate AST
+    ast = Parser.parse(input_file)
 
     if ast_file:
-        # TODO: Implement AST renderer
-        pass
+        DotExporter.export(ast, ast_file)
 
     if symb_file:
         # TODO: Implement symbol table renderer

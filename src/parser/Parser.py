@@ -1,7 +1,7 @@
 from antlr4 import *
+from antlr4.error.ErrorListener import ErrorListener, ConsoleErrorListener
 from ..antlr_files.compilerLexer import compilerLexer as CLexer
 from ..antlr_files.compilerParser import compilerParser as CParser, compilerParser
-from antlr4.error.ErrorListener import ErrorListener, ConsoleErrorListener
 from ..antlr_files.compilerVisitor import compilerVisitor as CVisitor
 
 from .TreeNode import *
@@ -47,19 +47,21 @@ class Parser:
     """
 
     @staticmethod
-    def convert_to_ast(cst: TreeNode) -> TreeNode:
+    def convert_to_ast(cst: TreeNode) -> TreeNode | None:
+        if not cst.children:
+            return
+
+        for child in cst.children:
+            Parser.convert_to_ast(child)
 
         # Remove all statements that have only one child except for some specific ones
         if len(cst.children) > 0:
             for child in cst.children:
                 if len(child.children) == 1:
                     new_child = child.children[0]
-                    if not isinstance(child, (StatNode, ProgNode)):
+                    if not isinstance(child, ProgNode):
                         idx = cst.children.index(child)
                         cst.children[idx] = new_child
-
-        for child in cst.children:
-            Parser.convert_to_ast(child)
 
         return cst
 
@@ -169,7 +171,6 @@ class ASTVisitor(CVisitor):
                 return BitNotNode(
                     line_nr=ctx.start.line, children=[children[0], children[2]]
                 )
-
 
         return ExprNode(line_nr=ctx.start.line, children=children)
 
