@@ -38,7 +38,7 @@ class Parser:
 
         tree: CParser.ProgContext = parser.prog()
 
-        return Parser.convert_to_ast(ASTVisitor().visit(tree))
+        return Parser.const_folding(Parser.convert_to_ast(ASTVisitor().visit(tree)))
 
     """
     TODO: remove None-nodes
@@ -55,13 +55,83 @@ class Parser:
             Parser.convert_to_ast(child)
 
         # Remove all statements that have only one child except for some specific ones
-        if len(cst.children) > 0:
-            for child in cst.children:
-                if len(child.children) == 1:
-                    new_child = child.children[0]
-                    if not isinstance(child, ProgNode):
-                        idx = cst.children.index(child)
-                        cst.children[idx] = new_child
+        for child in cst.children:
+            if len(child.children) == 1:
+                new_child = child.children[0]
+                if not isinstance(child, ProgNode):
+                    idx = cst.children.index(child)
+                    cst.children[idx] = new_child
+
+        return cst
+
+    @staticmethod
+    def const_folding(cst: TreeNode) -> TreeNode | None:
+        if not cst.children:
+            return
+
+        for child in cst.children:
+            Parser.const_folding(child)
+
+        for child in cst.children:
+            if (
+                isinstance(child, PlusNode)
+                and isinstance(child.children[0], IntNode)
+                and isinstance(child.children[1], IntNode)
+            ):
+                new_child = IntNode(
+                    str(int(child.children[0].value) + int(child.children[1].value)),
+                    line_nr=child.line_nr,
+                )
+                idx = cst.children.index(child)
+                cst.children[idx] = new_child
+
+            elif (
+                isinstance(child, MinusNode)
+                and isinstance(child.children[0], IntNode)
+                and isinstance(child.children[1], IntNode)
+            ):
+                new_child = IntNode(
+                    str(int(child.children[0].value) - int(child.children[1].value)),
+                    line_nr=child.line_nr,
+                )
+                idx = cst.children.index(child)
+                cst.children[idx] = new_child
+
+            elif (
+                isinstance(child, MultNode)
+                and isinstance(child.children[0], IntNode)
+                and isinstance(child.children[1], IntNode)
+            ):
+                new_child = IntNode(
+                    str(int(child.children[0].value) * int(child.children[1].value)),
+                    line_nr=child.line_nr,
+                )
+                idx = cst.children.index(child)
+                cst.children[idx] = new_child
+
+            elif (
+                isinstance(child, DivNode)
+                and isinstance(child.children[0], IntNode)
+                and isinstance(child.children[1], IntNode)
+            ):
+                new_child = IntNode(
+                    str(int(child.children[0].value) // int(child.children[1].value)),
+                    line_nr=child.line_nr,
+                )
+                idx = cst.children.index(child)
+                cst.children[idx] = new_child
+
+            elif (
+                isinstance(child, ModNode)
+                and isinstance(child.children[0], IntNode)
+                and isinstance(child.children[1], IntNode)
+            ):
+                new_child = IntNode(
+                    str(int(child.children[0].value) % int(child.children[1].value)),
+                    line_nr=child.line_nr,
+                )
+                idx = cst.children.index(child)
+                cst.children[idx] = new_child
 
         return cst
 
