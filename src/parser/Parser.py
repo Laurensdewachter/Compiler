@@ -54,7 +54,7 @@ class Parser:
             for child in cst.children:
                 if len(child.children) == 1:
                     new_child = child.children[0]
-                    if not isinstance(child, (StatNode, ProgNode)):
+                    if not isinstance(child, (StatNode, ProgNode, MainNode)):
                         idx = cst.children.index(child)
                         cst.children[idx] = new_child
 
@@ -169,7 +169,6 @@ class ASTVisitor(CVisitor):
                 return BitNotNode(
                     line_nr=ctx.start.line, children=[children[0], children[2]]
                 )
-
 
         return ExprNode(line_nr=ctx.start.line, children=children)
 
