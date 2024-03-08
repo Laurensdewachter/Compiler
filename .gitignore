@@ -168,3 +168,5 @@ compilerLexer.tokens
 compilerListener.py
 compilerParser.py
 compilerVisitor.py
+
+*.jar
