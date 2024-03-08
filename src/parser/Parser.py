@@ -132,6 +132,13 @@ class Parser:
                 )
                 idx = cst.children.index(child)
                 cst.children[idx] = new_child
+        if len(cst.children) > 0:
+            for child in cst.children:
+                if len(child.children) == 1:
+                    new_child = child.children[0]
+                    if not isinstance(child, (StatNode, ProgNode, MainNode)):
+                        idx = cst.children.index(child)
+                        cst.children[idx] = new_child
 
         return cst
 
