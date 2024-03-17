@@ -1,6 +1,7 @@
 import argparse
 from src.parser.Parser import Parser
 from src.parser.DotExporter import DotExporter
+from src.main.SymbolTable import *
 
 parser: argparse.ArgumentParser = argparse.ArgumentParser(prog="C-Compiler")
 parser.add_argument("--input", help="input file", required=True)
@@ -18,8 +19,15 @@ if __name__ == "__main__":
     target_llvm = args.target_llvm
     target_mips = args.target_mips
 
-    # Generate AST
-    ast = Parser.parse(input_file)
+    # Generate CST
+    cst = Parser.parse(input_file)
+
+    symbol_table = SymbolTable()
+
+    symbol_table.build_symbol_table(cst)
+
+    # Render CST
+    DotExporter.export(cst, "output")
 
     if ast_file:
         DotExporter.export(ast, ast_file)
