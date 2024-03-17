@@ -1,21 +1,21 @@
 from antlr4 import *
 from antlr4.error.ErrorListener import ErrorListener, ConsoleErrorListener
-from ..antlr_files.compilerLexer import compilerLexer as CLexer
-from ..antlr_files.compilerParser import compilerParser as CParser, compilerParser
-from ..antlr_files.compilerVisitor import compilerVisitor as CVisitor
+from src.antlr_files.compilerLexer import compilerLexer as CLexer
+from src.antlr_files.compilerParser import compilerParser as CParser, compilerParser
+from src.antlr_files.compilerVisitor import compilerVisitor as CVisitor
 
 from .TreeNode import *
 
 
 class MyErrorListener(ErrorListener):
-    def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
+    def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e) -> None:
         raise Exception(
             "Syntax error at line {0} column {1}: {2}".format(line, column, msg)
         )
 
 
 class Parser:
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     """
@@ -160,7 +160,7 @@ operator_signs = {
 
 
 class ASTVisitor(CVisitor):
-    def visitProg(self, ctx: CParser.ProgContext):
+    def visitProg(self, ctx: CParser.ProgContext) -> ProgNode:
         children = []
         for child in ctx.children:
             cstChild = self.visit(child)
@@ -170,7 +170,7 @@ class ASTVisitor(CVisitor):
 
         return ProgNode(line_nr=ctx.start.line, children=children)
 
-    def visitMain(self, ctx: compilerParser.MainContext):
+    def visitMain(self, ctx: compilerParser.MainContext) -> MainNode:
         children = []
         for child in ctx.children:
             cstChild = self.visit(child)
@@ -180,7 +180,7 @@ class ASTVisitor(CVisitor):
 
         return MainNode(line_nr=ctx.start.line, children=children)
 
-    def visitStat(self, ctx: CParser.StatContext):
+    def visitStat(self, ctx: CParser.StatContext) -> StatNode:
         children = []
         for child in ctx.children:
             cstChild = self.visit(child)
@@ -190,7 +190,7 @@ class ASTVisitor(CVisitor):
 
         return StatNode(line_nr=ctx.start.line, children=children)
 
-    def visitExpr(self, ctx: CParser.ExprContext):
+    def visitExpr(self, ctx: CParser.ExprContext) -> TreeNode:
         children = []
         for child in ctx.children:
             cstChild = self.visit(child)
@@ -248,7 +248,7 @@ class ASTVisitor(CVisitor):
 
         return ExprNode(line_nr=ctx.start.line, children=children)
 
-    def visitVariable(self, ctx: CParser.VariableContext):
+    def visitVariable(self, ctx: CParser.VariableContext) -> VariableNode:
         children = []
         for child in ctx.children:
             cstChild = self.visit(child)
@@ -258,7 +258,7 @@ class ASTVisitor(CVisitor):
 
         return VariableNode(line_nr=ctx.start.line, children=children)
 
-    def visitNewVariable(self, ctx: CParser.NewVariableContext):
+    def visitNewVariable(self, ctx: CParser.NewVariableContext) -> NewVariableNode:
         children = []
         for child in ctx.children:
             cstChild = self.visit(child)
@@ -268,7 +268,7 @@ class ASTVisitor(CVisitor):
 
         return NewVariableNode(line_nr=ctx.start.line, children=children)
 
-    def visitPointer(self, ctx: CParser.PointerContext):
+    def visitPointer(self, ctx: CParser.PointerContext) -> PointerNode:
         children = []
         pointer_depth = 0
         for child in ctx.children:
@@ -282,7 +282,7 @@ class ASTVisitor(CVisitor):
 
         return PointerNode(pointer_depth, line_nr=ctx.start.line, children=children)
 
-    def visitAddress(self, ctx: CParser.AddressContext):
+    def visitAddress(self, ctx: CParser.AddressContext) -> AddressNode:
         children = []
         for child in ctx.children:
             cstChild = self.visit(child)
@@ -292,7 +292,7 @@ class ASTVisitor(CVisitor):
 
         return AddressNode(line_nr=ctx.start.line, children=children)
 
-    def visitAssignment(self, ctx: CParser.AssignmentContext):
+    def visitAssignment(self, ctx: CParser.AssignmentContext) -> AssignNode:
         children = []
         for child in ctx.children:
             cstChild = self.visit(child)
@@ -302,7 +302,7 @@ class ASTVisitor(CVisitor):
 
         return AssignNode(line_nr=ctx.start.line, children=children)
 
-    def visitLiteral(self, ctx: CParser.LiteralContext):
+    def visitLiteral(self, ctx: CParser.LiteralContext) -> LiteralNode:
         children = []
         for child in ctx.children:
             cstChild = self.visit(child)
@@ -312,7 +312,7 @@ class ASTVisitor(CVisitor):
 
         return LiteralNode(line_nr=ctx.start.line, children=children)
 
-    def visitTerminal(self, node: TerminalNode):
+    def visitTerminal(self, node: TerminalNode) -> TreeNode:
         text = node.getText()
 
         if text in operator_signs:

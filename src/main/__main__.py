@@ -1,7 +1,7 @@
 import argparse
 from src.parser.Parser import Parser
 from src.parser.DotExporter import DotExporter
-from src.main.SymbolTable import *
+from src.parser.SymbolTable import *
 
 parser: argparse.ArgumentParser = argparse.ArgumentParser(prog="C-Compiler")
 parser.add_argument("--input", help="input file", required=True)
@@ -19,22 +19,19 @@ if __name__ == "__main__":
     target_llvm = args.target_llvm
     target_mips = args.target_mips
 
-    # Generate CST
-    cst = Parser.parse(input_file)
+    # Generate AST
+    ast: TreeNode = Parser.parse(input_file)
 
-    symbol_table = SymbolTable()
+    symbol_table: SymbolTable = SymbolTable()
 
-    symbol_table.build_symbol_table(cst)
-
-    # Render CST
-    DotExporter.export(cst, "output")
+    symbol_table.build_symbol_table(ast)
 
     if ast_file:
         DotExporter.export(ast, ast_file)
 
     if symb_file:
-        # TODO: Implement symbol table renderer
-        pass
+        with open(symb_file + ".txt", "w") as f:
+            f.write(str(symbol_table))
 
     if target_llvm:
         # TODO: Implement LLVM compiler
