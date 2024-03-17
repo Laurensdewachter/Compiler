@@ -161,8 +161,8 @@ class IdNode(TreeNode):
 
 
 class PointerNode(TreeNode):
-    def __init__(self, children=None, line_nr: int = -1):
-        super().__init__("Pointer", children=children, line_nr=line_nr)
+    def __init__(self, depth: int, children=None, line_nr: int = -1):
+        super().__init__(str(depth), children=children, line_nr=line_nr)
 
 
 class AddressNode(TreeNode):

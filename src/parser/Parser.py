@@ -58,7 +58,11 @@ class Parser:
         for child in cst.children:
             if len(child.children) == 1:
                 new_child = child.children[0]
-                if not isinstance(child, ProgNode):
+                if not (
+                    isinstance(child, ProgNode)
+                    or isinstance(child, PointerNode)
+                    or isinstance(child, AddressNode)
+                ):
                     idx = cst.children.index(child)
                     cst.children[idx] = new_child
 
@@ -144,7 +148,7 @@ operator_signs = {
     "<",
     ">",
     "==",
-    "&&",
+    "&",
     "||",
     ">=",
     "<=",
@@ -266,19 +270,23 @@ class ASTVisitor(CVisitor):
 
     def visitPointer(self, ctx: CParser.PointerContext):
         children = []
+        pointer_depth = 0
         for child in ctx.children:
             cstChild = self.visit(child)
             if cstChild is None:
                 continue
+            if isinstance(cstChild, MultNode):
+                pointer_depth += 1
+                continue
             children.append(cstChild)
 
-        return PointerNode(line_nr=ctx.start.line, children=children)
+        return PointerNode(pointer_depth, line_nr=ctx.start.line, children=children)
 
     def visitAddress(self, ctx: CParser.AddressContext):
         children = []
         for child in ctx.children:
             cstChild = self.visit(child)
-            if cstChild is None:
+            if cstChild is None or isinstance(cstChild, AddressNode):
                 continue
             children.append(cstChild)
 
@@ -323,6 +331,8 @@ class ASTVisitor(CVisitor):
                     return RShiftNode(line_nr=node.symbol.line)
                 case "<<":
                     return LShiftNode(line_nr=node.symbol.line)
+                case "&":
+                    return AddressNode(line_nr=node.symbol.line)
                 # TODO: Add more cases
         match node.symbol.type:
             case CParser.INT:
