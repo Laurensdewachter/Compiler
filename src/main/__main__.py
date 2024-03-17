@@ -30,8 +30,7 @@ if __name__ == "__main__":
     DotExporter.export(cst, "output")
 
     if ast_file:
-        # TODO: Implement AST renderer
-        pass
+        DotExporter.export(ast, ast_file)
 
     if symb_file:
         # TODO: Implement symbol table renderer

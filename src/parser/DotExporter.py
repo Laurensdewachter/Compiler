@@ -1,4 +1,4 @@
-import graphviz as gv
+import graphviz as gv # type: ignore
 from src.parser.TreeNode import TreeNode
 
 
@@ -10,7 +10,7 @@ class DotExporter:
     def export(tree: TreeNode, output_path: str):
         g = gv.Digraph(format="png")
         DotExporter._export(g, tree)
-        g.render(output_path, view=True)
+        g.render(output_path.replace(".dot", ""), view=True)
 
     @staticmethod
     def _export(g: gv.Digraph, tree: TreeNode):
