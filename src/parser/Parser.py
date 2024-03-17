@@ -25,7 +25,7 @@ class Parser:
     """
 
     @staticmethod
-    def parse(input_file: str) -> TreeNode:
+    def parse(input_file: str, no_const_fold: bool, no_const_prop: bool) -> TreeNode:
         error_listener = MyErrorListener()
         lexer = CLexer(FileStream(input_file))
         lexer.removeErrorListener(ConsoleErrorListener.INSTANCE)
@@ -38,7 +38,12 @@ class Parser:
 
         tree: CParser.ProgContext = parser.prog()
 
-        return Parser.const_folding(Parser.convert_to_ast(ASTVisitor().visit(tree)))
+        ast = Parser.convert_to_ast(ASTVisitor().visit(tree))
+        if not no_const_prop:
+            pass  # TODO: implement constant propagation
+        if not no_const_fold:
+            ast = Parser.const_folding(ast)
+        return ast
 
     """
     TODO: remove None-nodes

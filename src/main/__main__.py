@@ -9,6 +9,8 @@ parser.add_argument("--render_ast", help="render AST as dot-file")
 parser.add_argument("--render_symb", help="render symbol table as dot-file")
 parser.add_argument("--target_llvm", help="compile to LLVM")
 parser.add_argument("--target_mips", help="compile to MIPS")
+parser.add_argument("--no-const-folding", help="disable constant folding", default=False)
+parser.add_argument("--no-const-propagation", help="disable constant propagation", default=False)
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -18,12 +20,13 @@ if __name__ == "__main__":
     symb_file = args.render_symb
     target_llvm = args.target_llvm
     target_mips = args.target_mips
+    no_const_folding = args.no_const_folding
+    no_const_propagation = args.no_const_propagation
 
     # Generate AST
-    ast: TreeNode = Parser.parse(input_file)
-
+    ast: TreeNode = Parser.parse(input_file, no_const_folding, no_const_propagation)
+    # Generate symbol table
     symbol_table: SymbolTable = SymbolTable()
-
     symbol_table.build_symbol_table(ast)
 
     if ast_file:
