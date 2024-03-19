@@ -28,13 +28,10 @@ class SymbolTableEntry:
 
 
 class Table:
-    def __init__(self, parent_id: int = -1, offset: int = 0):
+    def __init__(self, parent_id: int = -1):
         self.table: list[SymbolTableEntry] = []
         self.parent_id: int = parent_id
         self.type: SymbolTableEntryType = type  # TreeNode type
-        self.offset: int = (
-            offset  # is this necessary? Might be useful for memory allocation
-        )
 
     def add_entry(self, entry: SymbolTableEntry):
         self.table.append(entry)
