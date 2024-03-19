@@ -71,6 +71,7 @@ class SymbolTable:
         self.tables: list[Table] = [
             Table()
         ]  # Root table of program is always at index 0
+        self.current_idx: int = 0
 
     def build_symbol_table(self, tree: TreeNode) -> None:
         if isinstance(tree, MainNode):
