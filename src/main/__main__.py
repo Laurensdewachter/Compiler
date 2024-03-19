@@ -23,14 +23,13 @@ if __name__ == "__main__":
     cst = Parser.parse(input_file)
 
     symbol_table = SymbolTable()
-
     symbol_table.build_symbol_table(cst)
 
     # Render CST
     DotExporter.export(cst, "output")
 
     if ast_file:
-        DotExporter.export(ast, ast_file)
+        DotExporter.export(cst, ast_file)
 
     if symb_file:
         # TODO: Implement symbol table renderer
