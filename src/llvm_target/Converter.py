@@ -42,6 +42,10 @@ def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
             return ir.IntType(1)
         case LeqNode():
             return ir.IntType(1)
+        case AndNode():
+            return ir.IntType(1)
+        case OrNode():
+            return ir.IntType(1)
         case ModNode():
             return ir.IntType(32)
         case IdNode():
@@ -194,6 +198,14 @@ class LlvmConverter:
                 left = self.node_to_llvm(value.children[0])
                 right = self.node_to_llvm(value.children[1])
                 builder.store(builder.srem(left, right), llvm_var)
+            case AndNode():
+                left = self.node_to_llvm(value.children[0])
+                right = self.node_to_llvm(value.children[1])
+                builder.store(builder.and_(left, right), llvm_var)
+            case OrNode():
+                left = self.node_to_llvm(value.children[0])
+                right = self.node_to_llvm(value.children[1])
+                builder.store(builder.or_(left, right), llvm_var)
             case _:
                 raise Exception(f"Unknown type at Generation of assignment: {value}")
 
@@ -231,6 +243,64 @@ class LlvmConverter:
                 left = self.node_to_llvm(node.children[0])
                 right = self.node_to_llvm(node.children[1])
                 return builder.ashr(left, right)
+            case EqualNode():
+                left = self.node_to_llvm(node.children[0])
+                right = self.node_to_llvm(node.children[1])
+                type = self.symbol_table.find_entry(node.children[0].value).type
+                if type == SymbolTableEntryType.Int:
+                    return builder.icmp_signed("==", left, right)
+                elif type == SymbolTableEntryType.Float:
+                    return builder.fcmp_ordered("==", left, right)
+                else:
+                    raise Exception(f"Unknown type: {type}")
+            case GtNode():
+                left = self.node_to_llvm(node.children[0])
+                right = self.node_to_llvm(node.children[1])
+                type = self.symbol_table.find_entry(node.children[0].value).type
+                if type == SymbolTableEntryType.Int:
+                    return builder.icmp_signed(">", left, right)
+                elif type == SymbolTableEntryType.Float:
+                    return builder.fcmp_ordered(">", left, right)
+                else:
+                    raise Exception(f"Unknown type: {type}")
+            case LtNode():
+                left = self.node_to_llvm(node.children[0])
+                right = self.node_to_llvm(node.children[1])
+                type = self.symbol_table.find_entry(node.children[0].value).type
+                if type == SymbolTableEntryType.Int:
+                    return builder.icmp_signed("<", left, right)
+                elif type == SymbolTableEntryType.Float:
+                    return builder.fcmp_ordered("<", left, right)
+                else:
+                    raise Exception(f"Unknown type: {type}")
+            case GeqNode():
+                left = self.node_to_llvm(node.children[0])
+                right = self.node_to_llvm(node.children[1])
+                type = self.symbol_table.find_entry(node.children[0].value).type
+                if type == SymbolTableEntryType.Int:
+                    return builder.icmp_signed(">=", left, right)
+                elif type == SymbolTableEntryType.Float:
+                    return builder.fcmp_ordered(">=", left, right)
+                else:
+                    raise Exception(f"Unknown type: {type}")
+            case LeqNode():
+                left = self.node_to_llvm(node.children[0])
+                right = self.node_to_llvm(node.children[1])
+                type = self.symbol_table.find_entry(node.children[0].value).type
+                if type == SymbolTableEntryType.Int:
+                    return builder.icmp_signed("<=", left, right)
+                elif type == SymbolTableEntryType.Float:
+                    return builder.fcmp_ordered("<=", left, right)
+                else:
+                    raise Exception(f"Unknown type: {type}")
+            case AndNode():
+                left = self.node_to_llvm(node.children[0])
+                right = self.node_to_llvm(node.children[1])
+                return builder.and_(left, right)
+            case OrNode():
+                left = self.node_to_llvm(node.children[0])
+                right = self.node_to_llvm(node.children[1])
+                return builder.or_(left, right)
             case _:
                 raise Exception(f"Unknown type: {node}")
 

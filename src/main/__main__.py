@@ -26,9 +26,6 @@ if __name__ == "__main__":
     symbol_table = SymbolTable()
     symbol_table.build_symbol_table(cst)
 
-    # Render CST
-    DotExporter.export(cst, "output")
-
     converter = LlvmConverter(symbol_table)
     converter.convert(cst)
 

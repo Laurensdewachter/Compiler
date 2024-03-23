@@ -72,6 +72,10 @@ def node_to_symbolTableEntryType(
         return SymbolTableEntryType.Bool
     if isinstance(node, ModNode):
         return SymbolTableEntryType.Int
+    if isinstance(node, AndNode):
+        return SymbolTableEntryType.Bool
+    if isinstance(node, OrNode):
+        return SymbolTableEntryType.Bool
 
     raise ValueError(f"Invalid node type: {node.__class__.__name__}")
 

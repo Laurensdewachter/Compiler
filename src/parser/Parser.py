@@ -274,6 +274,14 @@ class ASTVisitor(CVisitor):
                 return GeqNode(
                     line_nr=ctx.start.line, children=[children[0], children[2]]
                 )
+            elif isinstance(middle, AndNode):
+                return AndNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+            elif isinstance(middle, OrNode):
+                return OrNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
         if len(children) == 2:
             if isinstance(children[0], ReturnNode):
                 return ReturnNode(line_nr=ctx.start.line, children=[children[1]])
@@ -371,6 +379,10 @@ class ASTVisitor(CVisitor):
                     return LeqNode(line_nr=node.symbol.line)
                 case ">=":
                     return GeqNode(line_nr=node.symbol.line)
+                case "&&":
+                    return AndNode(line_nr=node.symbol.line)
+                case "||":
+                    return OrNode(line_nr=node.symbol.line)
                 case _:
                     raise Exception(f"Unknown operator: {text}")
                 # TODO: Add more cases
