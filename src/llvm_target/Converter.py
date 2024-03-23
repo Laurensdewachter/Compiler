@@ -383,7 +383,12 @@ class LlvmConverter:
         return var
 
     def convert(self, node: TreeNode) -> None:
-
+        """
+        Convert the AST to llvm code, always give the root of the AST to this function
+        Llvm code can be retrieved by calling return_llvm_code() afterwards
+        :param node: The root of the AST
+        :return: None
+        """
         match node:
             case MainNode():
                 function = ir.Function(
