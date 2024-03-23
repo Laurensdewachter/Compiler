@@ -83,9 +83,15 @@ class LlvmConverter:
             case EqualNode():
                 left = self.node_to_llvm(value.children[0])
                 right = self.node_to_llvm(value.children[1])
-                builder.store(
-                    builder.icmp_signed("==", left, right), llvm_var
-                )  # TODO: ICMP only supports integers
+                type = self.symbol_table.find_entry(value.children[0].value).type
+                if type == SymbolTableEntryType.Int:
+                    builder.store(builder.icmp_signed("==", left, right), llvm_var)
+                elif type == SymbolTableEntryType.Float:
+                    builder.store(builder.fcmp_ordered("==", left, right), llvm_var)
+                else:
+                    raise Exception(
+                        f"Unknown type at Generation of assignment: {value}"
+                    )
             case _:
                 raise Exception(f"Unknown type at Generation of assignment: {value}")
 
