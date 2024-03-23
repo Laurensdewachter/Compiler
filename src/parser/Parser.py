@@ -58,7 +58,7 @@ class Parser:
         for child in cst.children:
             if len(child.children) == 1:
                 new_child = child.children[0]
-                if not isinstance(child, (ProgNode, ReturnNode)):
+                if not isinstance(child, (ProgNode, ReturnNode, NotNode)):
                     idx = cst.children.index(child)
                     cst.children[idx] = new_child
 
@@ -137,7 +137,7 @@ class Parser:
                 if len(child.children) == 1:
                     new_child = child.children[0]
                     if not isinstance(
-                        child, (StatNode, ProgNode, MainNode, ReturnNode)
+                        child, (StatNode, ProgNode, MainNode, ReturnNode, NotNode)
                     ):
                         idx = cst.children.index(child)
                         cst.children[idx] = new_child
@@ -161,6 +161,7 @@ operator_signs = {
     "%",
     ">>",
     "<<",
+    "!",
 }
 
 
@@ -285,6 +286,8 @@ class ASTVisitor(CVisitor):
         if len(children) == 2:
             if isinstance(children[0], ReturnNode):
                 return ReturnNode(line_nr=ctx.start.line, children=[children[1]])
+            if isinstance(children[0], NotNode):
+                return NotNode(line_nr=ctx.start.line, children=[children[1]])
 
         return ExprNode(line_nr=ctx.start.line, children=children)
 
@@ -383,6 +386,8 @@ class ASTVisitor(CVisitor):
                     return AndNode(line_nr=node.symbol.line)
                 case "||":
                     return OrNode(line_nr=node.symbol.line)
+                case "!":
+                    return NotNode(line_nr=node.symbol.line)
                 case _:
                     raise Exception(f"Unknown operator: {text}")
                 # TODO: Add more cases

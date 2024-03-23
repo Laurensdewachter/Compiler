@@ -115,6 +115,11 @@ class LShiftNode(TreeNode):
         super().__init__("<<", children=children, line_nr=line_nr)
 
 
+class NotNode(TreeNode):
+    def __init__(self, children=None, line_nr: int = -1):
+        super().__init__("!", children=children, line_nr=line_nr)
+
+
 class RShiftNode(TreeNode):
     def __init__(self, children=None, line_nr: int = -1):
         super().__init__(">>", children=children, line_nr=line_nr)
