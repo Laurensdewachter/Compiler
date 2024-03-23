@@ -5,27 +5,36 @@ import subprocess
 
 
 def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
-    if isinstance(node, IntNode):
-        return ir.IntType(32)
-    if isinstance(node, FloatNode):
-        return ir.FloatType()
-    if isinstance(node, StringNode):
-        return ir.ArrayType(ir.IntType(8), len(node.value))
-    if isinstance(node, (PlusNode, MultNode, DivNode, MinusNode)):
-        return node_to_llvmtype(node.children[0], symbol_table)
-    if isinstance(node, IdNode):
-        symbol_table_type = symbol_table.find_entry(node.value).type
-        match symbol_table_type:
-            case SymbolTableEntryType.Int:
-                return ir.IntType(32)
-            case SymbolTableEntryType.Float:
-                return ir.FloatType()
-            case SymbolTableEntryType.String:
-                return ir.ArrayType(ir.IntType(8), 0)
-            case _:
-                raise Exception(f"Unknown type: {symbol_table_type}")
-
-    raise Exception(f"Unknown type: {node}")
+    match node:
+        case IntNode():
+            return ir.IntType(32)
+        case FloatNode():
+            return ir.FloatType()
+        case StringNode():
+            return ir.ArrayType(ir.IntType(8), len(node.value))
+        case PlusNode():
+            return node_to_llvmtype(node.children[0], symbol_table)
+        case MultNode():
+            return node_to_llvmtype(node.children[0], symbol_table)
+        case DivNode():
+            return node_to_llvmtype(node.children[0], symbol_table)
+        case MinusNode():
+            return node_to_llvmtype(node.children[0], symbol_table)
+        case EqualNode():
+            return ir.IntType(1)
+        case IdNode():
+            symbol_table_type = symbol_table.find_entry(node.value).type
+            match symbol_table_type:
+                case SymbolTableEntryType.Int:
+                    return ir.IntType(32)
+                case SymbolTableEntryType.Float:
+                    return ir.FloatType()
+                case SymbolTableEntryType.String:
+                    return ir.ArrayType(ir.IntType(8), 0)
+                case _:
+                    raise Exception(f"Unknown type: {symbol_table_type}")
+        case _:
+            raise Exception(f"Unknown type: {node}")
 
 
 class LlvmConverter:
@@ -71,6 +80,12 @@ class LlvmConverter:
                 builder.store(self.division(value), llvm_var)
             case MinusNode():
                 builder.store(self.subtraction(value), llvm_var)
+            case EqualNode():
+                left = self.node_to_llvm(value.children[0])
+                right = self.node_to_llvm(value.children[1])
+                builder.store(
+                    builder.icmp_signed("==", left, right), llvm_var
+                )  # TODO: ICMP only supports integers
             case _:
                 raise Exception(f"Unknown type at Generation of assignment: {value}")
 
@@ -144,52 +159,76 @@ class LlvmConverter:
 
     def convert(self, node: TreeNode) -> None:
 
-        if isinstance(node, MainNode):
-            function = ir.Function(
-                self.module, ir.FunctionType(ir.IntType(32), []), "main"
-            )
-            self.blocks.append(function.append_basic_block("main"))
-            self.builders.append(ir.IRBuilder(self.blocks[-1]))
-
-        if isinstance(node, AssignNode):
-            assignee = self.symbol_table.find_entry(node.children[0].value).llvm_var
-            value = node.children[1]
-
-            self.store_value(value, assignee)
-
-        if isinstance(node, NewVariableNode):
-            builder = self.builders[-1]
-
-            symbol_table_entry = self.symbol_table.find_entry(node.children[0].value)
-
-            var_type = node_to_llvmtype(node.children[1], self.symbol_table)
-            var = builder.alloca(var_type, name=node.children[0].value)
-
-            symbol_table_entry.llvm_var = var
-            value = node.children[1]
-
-            self.store_value(value, var)
-
-        if isinstance(node, ReturnNode):
-            builder = self.builders[-1]
-
-            if isinstance(node.children[0], IntNode):
-                builder.ret(ir.Constant(ir.IntType(32), int(node.children[0].value)))
-            elif isinstance(node.children[0], FloatNode):
-                builder.ret(ir.Constant(ir.FloatType(), float(node.children[0].value)))
-            elif isinstance(node.children[0], StringNode):
-                builder.ret(
-                    ir.Constant(
-                        ir.ArrayType(ir.IntType(8), len(node.children[0].value)),
-                        bytearray(node.children[0].value.encode("utf-8")),
-                    )
+        match node:
+            case MainNode():
+                function = ir.Function(
+                    self.module, ir.FunctionType(ir.IntType(32), []), "main"
                 )
-            elif isinstance(node.children[0], IdNode):
-                builder.ret(
-                    builder.load(
-                        self.symbol_table.find_entry(node.children[0].value).llvm_var
-                    )
+                self.blocks.append(function.append_basic_block("main"))
+                self.builders.append(ir.IRBuilder(self.blocks[-1]))
+
+            case AssignNode():
+                assignee = self.symbol_table.find_entry(node.children[0].value).llvm_var
+                value = node.children[1]
+
+                self.store_value(value, assignee)
+
+            case NewVariableNode():
+                builder = self.builders[-1]
+
+                symbol_table_entry = self.symbol_table.find_entry(
+                    node.children[0].value
                 )
+
+                var_type = node_to_llvmtype(node.children[1], self.symbol_table)
+                var = builder.alloca(var_type, name=node.children[0].value)
+
+                symbol_table_entry.llvm_var = var
+                value = node.children[1]
+
+                self.store_value(value, var)
+
+            case ReturnNode():
+                builder = self.builders[-1]
+
+                match node.children[0]:
+                    case IntNode():
+                        builder.ret(
+                            ir.Constant(ir.IntType(32), int(node.children[0].value))
+                        )
+                    case FloatNode():
+                        builder.ret(
+                            ir.Constant(ir.FloatType(), float(node.children[0].value))
+                        )
+                    case StringNode():
+                        builder.ret(
+                            ir.Constant(
+                                ir.ArrayType(
+                                    ir.IntType(8), len(node.children[0].value)
+                                ),
+                                bytearray(node.children[0].value.encode("utf-8")),
+                            )
+                        )
+                    case IdNode():
+                        builder.ret(
+                            builder.load(
+                                self.symbol_table.find_entry(
+                                    node.children[0].value
+                                ).llvm_var
+                            )
+                        )
+                    case PlusNode():
+                        builder.ret(self.addition(node.children[0]))
+                    case MultNode():
+                        builder.ret(self.multiplication(node.children[0]))
+                    case DivNode():
+                        builder.ret(self.division(node.children[0]))
+                    case MinusNode():
+                        builder.ret(self.subtraction(node.children[0]))
+                    case _:
+                        raise Exception(
+                            f"Unknown type at Generation of return: {node.children[0]}"
+                        )
 
         for child in node.children:
             self.convert(child)

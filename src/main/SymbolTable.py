@@ -17,7 +17,7 @@ class SymbolTableEntry:
         name: str,
         type: SymbolTableEntryType,
         const: bool = False,
-        llvm_var = None,
+        llvm_var=None,
     ) -> None:
         self.name: str = name
         self.type: SymbolTableEntryType = type
@@ -58,6 +58,8 @@ def node_to_symbolTableEntryType(
         return node_to_symbolTableEntryType(node.children[0], symbol_table)
     if isinstance(node, IdNode):
         return symbol_table.find_entry(node.value).type
+    if isinstance(node, EqualNode):
+        return SymbolTableEntryType.Bool
     raise ValueError(f"Invalid node type: {node.__class__.__name__}")
 
 
