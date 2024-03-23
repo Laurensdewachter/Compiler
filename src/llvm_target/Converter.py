@@ -1,6 +1,7 @@
 from llvmlite import ir, binding
 from ..parser.TreeNode import *
 from src.main.SymbolTable import SymbolTable, SymbolTableEntryType
+import subprocess
 
 
 def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
@@ -31,7 +32,14 @@ class LlvmConverter:
     def __init__(self, symbol_table: SymbolTable):
         self.blocks = []
         self.builders = []
+
+        # Get the target triple using llvm-config
+        target_triple = (
+            subprocess.check_output(["llvm-config", "--host-target"]).decode().strip()
+        )
         self.module = ir.Module("module")
+        self.module.triple = target_triple
+
         self.symbol_table = symbol_table
 
     def store_value(self, value: TreeNode, llvm_var: ir.Value) -> None:
@@ -162,7 +170,6 @@ class LlvmConverter:
             self.store_value(value, var)
 
         if isinstance(node, ReturnNode):
-            block = self.blocks[-1]
             builder = self.builders[-1]
 
             if isinstance(node.children[0], IntNode):
