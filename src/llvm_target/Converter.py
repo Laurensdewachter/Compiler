@@ -53,7 +53,8 @@ class LlvmConverter:
             case StringNode():
                 builder.store(
                     ir.Constant(
-                        ir.ArrayType(ir.IntType(8), len(value.value)), value.value
+                        ir.ArrayType(ir.IntType(8), len(value.value)),
+                        bytearray(value.value.encode("utf-8")),
                     ),
                     llvm_var,
                 )
@@ -180,7 +181,7 @@ class LlvmConverter:
                 builder.ret(
                     ir.Constant(
                         ir.ArrayType(ir.IntType(8), len(node.children[0].value)),
-                        node.children[0].value,
+                        bytearray(node.children[0].value.encode("utf-8")),
                     )
                 )
             elif isinstance(node.children[0], IdNode):
