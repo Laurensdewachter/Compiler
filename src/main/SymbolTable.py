@@ -1,6 +1,6 @@
 from enum import Enum
-
 from src.parser.TreeNode import *
+from llvmlite import ir
 
 
 class SymbolTableEntryType(Enum):
@@ -17,13 +17,11 @@ class SymbolTableEntry:
         name: str,
         type: SymbolTableEntryType,
         const: bool = False,
-        offset: int = 0,
+        llvm_var = None,
     ) -> None:
         self.name: str = name
         self.type: SymbolTableEntryType = type
-        self.offset: int = (
-            offset  # is this necessary? Might be useful for memory allocation
-        )
+        self.llvm_var = llvm_var
         self.const: bool = const
 
 

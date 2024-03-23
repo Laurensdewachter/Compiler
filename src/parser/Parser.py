@@ -58,7 +58,7 @@ class Parser:
         for child in cst.children:
             if len(child.children) == 1:
                 new_child = child.children[0]
-                if not isinstance(child, ProgNode):
+                if not isinstance(child, (ProgNode, ReturnNode)):
                     idx = cst.children.index(child)
                     cst.children[idx] = new_child
 
@@ -136,7 +136,9 @@ class Parser:
             for child in cst.children:
                 if len(child.children) == 1:
                     new_child = child.children[0]
-                    if not isinstance(child, (StatNode, ProgNode, MainNode)):
+                    if not isinstance(
+                        child, (StatNode, ProgNode, MainNode, ReturnNode)
+                    ):
                         idx = cst.children.index(child)
                         cst.children[idx] = new_child
 
@@ -249,6 +251,10 @@ class ASTVisitor(CVisitor):
                     line_nr=ctx.start.line, children=[children[0], children[2]]
                 )
 
+        if len(children) == 2:
+            if isinstance(children[0], ReturnNode):
+                return ReturnNode(line_nr=ctx.start.line, children=[children[1]])
+
         return ExprNode(line_nr=ctx.start.line, children=children)
 
     def visitVariable(self, ctx: CParser.VariableContext):
@@ -330,6 +336,8 @@ class ASTVisitor(CVisitor):
                     return RShiftNode(line_nr=node.symbol.line)
                 case "<<":
                     return LShiftNode(line_nr=node.symbol.line)
+                case _:
+                    raise Exception(f"Unknown operator: {text}")
                 # TODO: Add more cases
         match node.symbol.type:
             case CParser.INT:
@@ -350,3 +358,5 @@ class ASTVisitor(CVisitor):
                 return BitXorNode(text, line_nr=node.symbol.line)
             case CParser.BITNOT:
                 return BitNotNode(text, line_nr=node.symbol.line)
+            case CParser.RETURN:
+                return ReturnNode(text, line_nr=node.symbol.line)

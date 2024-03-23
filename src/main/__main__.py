@@ -2,6 +2,7 @@ import argparse
 from src.parser.Parser import Parser
 from src.parser.DotExporter import DotExporter
 from src.main.SymbolTable import *
+from src.llvm_target.Converter import LlvmConverter
 
 parser: argparse.ArgumentParser = argparse.ArgumentParser(prog="C-Compiler")
 parser.add_argument("--input", help="input file", required=True)
@@ -28,6 +29,9 @@ if __name__ == "__main__":
     # Render CST
     DotExporter.export(cst, "output")
 
+    converter = LlvmConverter(symbol_table)
+    converter.convert(cst)
+
     if ast_file:
         DotExporter.export(cst, ast_file)
 
@@ -37,7 +41,8 @@ if __name__ == "__main__":
 
     if target_llvm:
         # TODO: Implement LLVM compiler
-        pass
+        with open(target_llvm, "w") as f:
+            f.write(converter.return_llvm_code())
 
     if target_mips:
         # TODO: Implement MIPS compiler
