@@ -32,6 +32,8 @@ def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
             return ir.IntType(1)
         case LeqNode():
             return ir.IntType(1)
+        case ModNode():
+            return ir.IntType(32)
         case IdNode():
             symbol_table_type = symbol_table.find_entry(node.value).type
             match symbol_table_type:
@@ -164,6 +166,10 @@ class LlvmConverter:
                     raise Exception(
                         f"Unknown type at Generation of assignment: {value}"
                     )
+            case ModNode():
+                left = self.node_to_llvm(value.children[0])
+                right = self.node_to_llvm(value.children[1])
+                builder.store(builder.srem(left, right), llvm_var)
             case _:
                 raise Exception(f"Unknown type at Generation of assignment: {value}")
 
@@ -184,6 +190,10 @@ class LlvmConverter:
                 return self.division(node)
             case MinusNode():
                 return self.subtraction(node)
+            case ModNode():
+                left = self.node_to_llvm(node.children[0])
+                right = self.node_to_llvm(node.children[1])
+                return builder.srem(left, right)
             case _:
                 raise Exception(f"Unknown type: {node}")
 

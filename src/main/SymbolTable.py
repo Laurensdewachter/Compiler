@@ -70,6 +70,8 @@ def node_to_symbolTableEntryType(
         return SymbolTableEntryType.Bool
     if isinstance(node, GeqNode):
         return SymbolTableEntryType.Bool
+    if isinstance(node, ModNode):
+        return SymbolTableEntryType.Int
 
     raise ValueError(f"Invalid node type: {node.__class__.__name__}")
 
