@@ -34,7 +34,7 @@ class LlvmConverter:
         self.module = ir.Module("module")
         self.symbol_table = symbol_table
 
-    def store_value(self, value: TreeNode, llvm_var: ir.Value):
+    def store_value(self, value: TreeNode, llvm_var: ir.Value) -> None:
         builder = self.builders[-1]
 
         match value:
@@ -133,7 +133,7 @@ class LlvmConverter:
 
         return var
 
-    def convert(self, node: TreeNode):
+    def convert(self, node: TreeNode) -> None:
 
         if isinstance(node, MainNode):
             function = ir.Function(
@@ -186,5 +186,5 @@ class LlvmConverter:
         for child in node.children:
             self.convert(child)
 
-    def return_llvm_code(self):
+    def return_llvm_code(self) -> str:
         return str(self.module)
