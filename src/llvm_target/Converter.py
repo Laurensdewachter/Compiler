@@ -459,4 +459,8 @@ class LlvmConverter:
             self.convert(child)
 
     def return_llvm_code(self) -> str:
+        """
+        Return the generated llvm code
+        :return: str : The generated llvm code
+        """
         return str(self.module)
