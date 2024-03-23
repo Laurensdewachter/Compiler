@@ -5,6 +5,12 @@ import subprocess
 
 
 def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
+    """
+    Check type of a TreeNode to a llvmlite ir.Type
+    :param node: TreeNode to check the type of
+    :param symbol_table: symbol table of the compiler
+    :return: ir.Type : The type of the TreeNode
+    """
     match node:
         case IntNode():
             return ir.IntType(32)
@@ -64,6 +70,12 @@ class LlvmConverter:
         self.symbol_table = symbol_table
 
     def store_value(self, value: TreeNode, llvm_var: ir.Value) -> None:
+        """
+        Store the value of a node in a llvm variable
+        :param value: TreeNode to store
+        :param llvm_var: llvmlite variable to store the value in
+        :return: None
+        """
         builder = self.builders[-1]
 
         match value:
@@ -174,6 +186,11 @@ class LlvmConverter:
                 raise Exception(f"Unknown type at Generation of assignment: {value}")
 
     def node_to_llvm(self, node: TreeNode) -> ir.Value:
+        """
+        Convert a TreeNode to a llvmlite ir.Value
+        :param node: Treenode to convert
+        :return: ir.Value : The converted node
+        """
         builder = self.builders[-1]
         match node:
             case IntNode():
@@ -198,6 +215,11 @@ class LlvmConverter:
                 raise Exception(f"Unknown type: {node}")
 
     def addition(self, node: TreeNode) -> ir.Value:
+        """
+        Convert a PlusNode to a llvmlite ir.Value
+        :param node: PlusNode to convert
+        :return: ir.Value : The converted node
+        """
         builder = self.builders[-1]
         left = node.children[0]
         right = node.children[1]
@@ -210,6 +232,11 @@ class LlvmConverter:
         return var
 
     def multiplication(self, node: TreeNode) -> ir.Value:
+        """
+        Convert a MultNode to a llvmlite ir.Value
+        :param node: MultNode to convert
+        :return: ir.Value : The converted node
+        """
         builder = self.builders[-1]
         left = node.children[0]
         right = node.children[1]
@@ -222,6 +249,11 @@ class LlvmConverter:
         return var
 
     def division(self, node: TreeNode) -> ir.Value:
+        """
+        Convert a DivNode to a llvmlite ir.Value
+        :param node: DivNode to convert
+        :return: ir.Value : The converted node
+        """
         builder = self.builders[-1]
         left = node.children[0]
         right = node.children[1]
@@ -234,6 +266,11 @@ class LlvmConverter:
         return var
 
     def subtraction(self, node: TreeNode) -> ir.Value:
+        """
+        Convert a MinusNode to a llvmlite ir.Value
+        :param node: MinusNode: to convert
+        :return: Ir.Value : The converted node
+        """
         builder = self.builders[-1]
         left = node.children[0]
         right = node.children[1]
