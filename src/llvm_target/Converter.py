@@ -22,6 +22,8 @@ def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
             return node_to_llvmtype(node.children[0], symbol_table)
         case EqualNode():
             return ir.IntType(1)
+        case NeqNode():
+            return ir.IntType(1)
         case IdNode():
             symbol_table_type = symbol_table.find_entry(node.value).type
             match symbol_table_type:
@@ -88,6 +90,18 @@ class LlvmConverter:
                     builder.store(builder.icmp_signed("==", left, right), llvm_var)
                 elif type == SymbolTableEntryType.Float:
                     builder.store(builder.fcmp_ordered("==", left, right), llvm_var)
+                else:
+                    raise Exception(
+                        f"Unknown type at Generation of assignment: {value}"
+                    )
+            case NeqNode():
+                left = self.node_to_llvm(value.children[0])
+                right = self.node_to_llvm(value.children[1])
+                type = self.symbol_table.find_entry(value.children[0].value).type
+                if type == SymbolTableEntryType.Int:
+                    builder.store(builder.icmp_signed("!=", left, right), llvm_var)
+                elif type == SymbolTableEntryType.Float:
+                    builder.store(builder.fcmp_ordered("!=", left, right), llvm_var)
                 else:
                     raise Exception(
                         f"Unknown type at Generation of assignment: {value}"

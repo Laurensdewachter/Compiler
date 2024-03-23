@@ -254,6 +254,10 @@ class ASTVisitor(CVisitor):
                 return EqualNode(
                     line_nr=ctx.start.line, children=[children[0], children[2]]
                 )
+            elif isinstance(middle, NeqNode):
+                return NeqNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
 
         if len(children) == 2:
             if isinstance(children[0], ReturnNode):
@@ -342,6 +346,8 @@ class ASTVisitor(CVisitor):
                     return LShiftNode(line_nr=node.symbol.line)
                 case "==":
                     return EqualNode(line_nr=node.symbol.line)
+                case "!=":
+                    return NeqNode(line_nr=node.symbol.line)
                 case _:
                     raise Exception(f"Unknown operator: {text}")
                 # TODO: Add more cases

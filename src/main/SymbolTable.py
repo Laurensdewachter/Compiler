@@ -60,6 +60,8 @@ def node_to_symbolTableEntryType(
         return symbol_table.find_entry(node.value).type
     if isinstance(node, EqualNode):
         return SymbolTableEntryType.Bool
+    if isinstance(node, NeqNode):
+        return SymbolTableEntryType.Bool
     raise ValueError(f"Invalid node type: {node.__class__.__name__}")
 
 
