@@ -26,6 +26,10 @@ def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
             return node_to_llvmtype(node.children[0], symbol_table)
         case MinusNode():
             return node_to_llvmtype(node.children[0], symbol_table)
+        case LShiftNode():
+            return ir.IntType(32)
+        case RShiftNode():
+            return ir.IntType(32)
         case EqualNode():
             return ir.IntType(1)
         case NeqNode():
@@ -116,6 +120,14 @@ class LlvmConverter:
                     raise Exception(
                         f"Unknown type at Generation of assignment: {value}"
                     )
+            case LShiftNode():
+                left = self.node_to_llvm(value.children[0])
+                right = self.node_to_llvm(value.children[1])
+                builder.store(builder.shl(left, right), llvm_var)
+            case RShiftNode():
+                left = self.node_to_llvm(value.children[0])
+                right = self.node_to_llvm(value.children[1])
+                builder.store(builder.ashr(left, right), llvm_var)
             case NeqNode():
                 left = self.node_to_llvm(value.children[0])
                 right = self.node_to_llvm(value.children[1])
@@ -211,6 +223,14 @@ class LlvmConverter:
                 left = self.node_to_llvm(node.children[0])
                 right = self.node_to_llvm(node.children[1])
                 return builder.srem(left, right)
+            case LShiftNode():
+                left = self.node_to_llvm(node.children[0])
+                right = self.node_to_llvm(node.children[1])
+                return builder.shl(left, right)
+            case RShiftNode():
+                left = self.node_to_llvm(node.children[0])
+                right = self.node_to_llvm(node.children[1])
+                return builder.ashr(left, right)
             case _:
                 raise Exception(f"Unknown type: {node}")
 
