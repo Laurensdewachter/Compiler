@@ -63,12 +63,7 @@ class Parser:
         for child in cst.children:
             if len(child.children) == 1:
                 new_child = child.children[0]
-                if not (
-                    isinstance(child, ProgNode)
-                    or isinstance(child, PointerNode)
-                    or isinstance(child, AddressNode)
-                ):
-                if not isinstance(child, (ProgNode, ReturnNode, NotNode)):
+                if not isinstance(child, (ProgNode, PointerNode, AddressNode, ReturnNode, NotNode)):
                     idx = cst.children.index(child)
                     cst.children[idx] = new_child
 
@@ -402,10 +397,10 @@ class ASTVisitor(CVisitor):
                     return OrNode(line_nr=node.symbol.line)
                 case "!":
                     return NotNode(line_nr=node.symbol.line)
-                case _:
-                    raise Exception(f"Unknown operator: {text}")
                 case "&":
                     return AddressNode(line_nr=node.symbol.line)
+                case _:
+                    raise Exception(f"Unknown operator: {text}")
                 # TODO: Add more cases
         match node.symbol.type:
             case CParser.INT:

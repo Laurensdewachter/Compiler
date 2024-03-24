@@ -1,7 +1,7 @@
 import argparse
 from src.parser.Parser import Parser
 from src.parser.DotExporter import DotExporter
-from src.main.SymbolTable import *
+from src.parser.SymbolTable import *
 from src.llvm_target.Converter import LlvmConverter
 
 parser: argparse.ArgumentParser = argparse.ArgumentParser(prog="C-Compiler")
@@ -10,8 +10,12 @@ parser.add_argument("--render_ast", help="render AST as dot-file")
 parser.add_argument("--render_symb", help="render symbol table as dot-file")
 parser.add_argument("--target_llvm", help="compile to LLVM")
 parser.add_argument("--target_mips", help="compile to MIPS")
-parser.add_argument("--no-const-folding", help="disable constant folding", default=False)
-parser.add_argument("--no-const-propagation", help="disable constant propagation", default=False)
+parser.add_argument(
+    "--no-const-folding", help="disable constant folding", default=False
+)
+parser.add_argument(
+    "--no-const-propagation", help="disable constant propagation", default=False
+)
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -29,11 +33,6 @@ if __name__ == "__main__":
     # Generate symbol table
     symbol_table: SymbolTable = SymbolTable()
     symbol_table.build_symbol_table(ast)
-    symbol_table = SymbolTable()
-    symbol_table.build_symbol_table(cst)
-
-    converter = LlvmConverter(symbol_table)
-    converter.convert(cst)
 
     if ast_file:
         DotExporter.export(ast, ast_file)
@@ -43,7 +42,10 @@ if __name__ == "__main__":
             f.write(str(symbol_table))
 
     if target_llvm:
-        # TODO: Implement LLVM compiler
+        # Generate llvm target
+        converter = LlvmConverter(symbol_table)
+        converter.convert(ast)
+
         with open(target_llvm, "w") as f:
             f.write(converter.return_llvm_code())
 
