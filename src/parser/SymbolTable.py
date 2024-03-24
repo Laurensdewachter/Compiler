@@ -17,12 +17,14 @@ class SymbolTableEntry:
         name: str,
         type: SymbolTableEntryType,
         const: bool = False,
+        declaration_line: int = -1,
         llvm_var=None,
     ) -> None:
         self.name: str = name
         self.type: SymbolTableEntryType = type
-        self.llvm_var = llvm_var
         self.const: bool = const
+        self.declaration_line = declaration_line
+        self.llvm_var = llvm_var
 
 
 class Table:
@@ -34,7 +36,7 @@ class Table:
     def __repr__(self) -> str:
         string: str = ""
         for entry in self.table:
-            string += f"id: {entry.name}, type: {entry.type}, constant: {entry.const}\n"
+            string += f"id: {entry.name}, type: {entry.type.name}, constant: {entry.const}\n"
         return string
 
     def add_entry(self, entry: SymbolTableEntry):
@@ -84,6 +86,10 @@ def node_to_symbolTableEntryType(
         return SymbolTableEntryType.Bool
     if isinstance(node, NotNode):
         return SymbolTableEntryType.Bool
+    if isinstance(node, CharNode):
+        return SymbolTableEntryType.Char
+    if isinstance(node, BoolNode):
+        return SymbolTableEntryType.Bool
 
     raise ValueError(f"Invalid node type: {node.__class__.__name__}")
 
@@ -118,16 +124,17 @@ class SymbolTable:
             if isinstance(tree.children[0], ConstNode):
                 self.tables[self.current_idx].add_entry(
                     SymbolTableEntry(
-                        tree.children[1].value,
-                        node_to_symbolTableEntryType(tree.children[2], self),
-                        True
+                        tree.children[2].value,
+                        node_to_symbolTableEntryType(tree.children[3], self),
+                        True, tree.children[2].line_nr
                     )
                 )
             else:
                 self.tables[self.current_idx].add_entry(
                     SymbolTableEntry(
-                        tree.children[0].value,
-                        node_to_symbolTableEntryType(tree.children[1], self)
+                        tree.children[1].value,
+                        node_to_symbolTableEntryType(tree.children[2], self),
+                        False, tree.children[2].line_nr
                     )
                 )
         for child in tree.children:

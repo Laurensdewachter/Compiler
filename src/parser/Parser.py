@@ -1,10 +1,9 @@
 from antlr4 import *
+from src.parser.TreeNode import *
 from antlr4.error.ErrorListener import ErrorListener, ConsoleErrorListener
 from src.antlr_files.compilerLexer import compilerLexer as CLexer
 from src.antlr_files.compilerParser import compilerParser as CParser, compilerParser
 from src.antlr_files.compilerVisitor import compilerVisitor as CVisitor
-
-from src.parser.TreeNode import *
 
 
 class MyErrorListener(ErrorListener):
@@ -45,12 +44,6 @@ class Parser:
             ast = Parser.const_folding(ast)
         return ast
 
-    """
-    TODO: remove None-nodes
-    TODO: remove unnecessary nodes (e.g. Nodes with 1 child) 
-    TODO: ...
-    """
-
     @staticmethod
     def convert_to_ast(cst: TreeNode) -> TreeNode | None:
         if not cst.children:
@@ -63,7 +56,9 @@ class Parser:
         for child in cst.children:
             if len(child.children) == 1:
                 new_child = child.children[0]
-                if not isinstance(child, (ProgNode, PointerNode, AddressNode, ReturnNode, NotNode)):
+                if not isinstance(
+                    child, (ProgNode, PointerNode, AddressNode, ReturnNode, NotNode)
+                ):
                     idx = cst.children.index(child)
                     cst.children[idx] = new_child
 
@@ -410,6 +405,8 @@ class ASTVisitor(CVisitor):
             case CParser.STRING:
                 return StringNode(text, line_nr=node.symbol.line)
             case CParser.ID:
+                if text in ("true", "false"):
+                    return BoolNode(text, line_nr=node.symbol.line)
                 return IdNode(text, line_nr=node.symbol.line)
             case CParser.POINTER:
                 return PointerNode(text, line_nr=node.symbol.line)
@@ -425,3 +422,9 @@ class ASTVisitor(CVisitor):
                 return ReturnNode(text, line_nr=node.symbol.line)
             case CParser.CONST:
                 return ConstNode(line_nr=node.symbol.line)
+            case CParser.CHAR:
+                return CharNode(text, line_nr=node.symbol.line)
+            case CParser.TYPE:
+                return TypeNode(text, line_nr=node.symbol.line)
+            case CParser.BOOL:
+                return BoolNode(text, line_nr=node.symbol.line)

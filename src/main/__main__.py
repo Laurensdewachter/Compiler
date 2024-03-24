@@ -2,6 +2,7 @@ import argparse
 from src.parser.Parser import Parser
 from src.parser.DotExporter import DotExporter
 from src.parser.SymbolTable import *
+from src.parser.SemanticAnalyzer import *
 from src.llvm_target.Converter import LlvmConverter
 
 parser: argparse.ArgumentParser = argparse.ArgumentParser(prog="C-Compiler")
@@ -33,6 +34,12 @@ if __name__ == "__main__":
     # Generate symbol table
     symbol_table: SymbolTable = SymbolTable()
     symbol_table.build_symbol_table(ast)
+    # Analyze semantic
+    semantic_errors: list[str] = SemanticAnalyzer.analyze(ast, symbol_table)
+    for error in semantic_errors:
+        print(error)
+    if semantic_errors:
+        quit(-1)
 
     if ast_file:
         DotExporter.export(ast, ast_file)
