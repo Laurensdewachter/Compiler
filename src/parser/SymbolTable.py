@@ -31,6 +31,12 @@ class Table:
         self.parent_id: int = parent_id
         self.type: SymbolTableEntryType = type  # TreeNode type
 
+    def __repr__(self) -> str:
+        string: str = ""
+        for entry in self.table:
+            string += f"id: {entry.name}, type: {entry.type}, constant: {entry.const}\n"
+        return string
+
     def add_entry(self, entry: SymbolTableEntry):
         self.table.append(entry)
 
@@ -89,6 +95,18 @@ class SymbolTable:
         ]  # Root table of program is always at index 0
         self.current_idx: int = 0
 
+    def __str__(self):
+        string: str = ""
+        for table in self.tables:
+            string += f"index: {self.current_idx}\n"
+            string += (
+                f"------------------------------------------------------------------\n"
+            )
+            string += str(table) + "\n"
+            self.current_idx += 1
+        self.current_idx = 0
+        return string
+
     def build_symbol_table(self, tree: TreeNode) -> None:
         if isinstance(tree, MainNode):
             self.tables.append(Table(parent_id=self.current_idx))
@@ -97,12 +115,21 @@ class SymbolTable:
         if isinstance(tree, NewVariableNode):
             if self.find_entry_in_current_scope(tree.children[0].value):
                 raise ValueError(f"error: redefinition of '{tree.children[0].value}'")
-            self.tables[self.current_idx].add_entry(
-                SymbolTableEntry(
-                    tree.children[0].value,
-                    node_to_symbolTableEntryType(tree.children[1], self),
+            if isinstance(tree.children[0], ConstNode):
+                self.tables[self.current_idx].add_entry(
+                    SymbolTableEntry(
+                        tree.children[1].value,
+                        node_to_symbolTableEntryType(tree.children[2], self),
+                        True
+                    )
                 )
-            )
+            else:
+                self.tables[self.current_idx].add_entry(
+                    SymbolTableEntry(
+                        tree.children[0].value,
+                        node_to_symbolTableEntryType(tree.children[1], self)
+                    )
+                )
         for child in tree.children:
             self.build_symbol_table(child)
 

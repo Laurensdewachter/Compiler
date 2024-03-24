@@ -188,3 +188,8 @@ class PointerNode(TreeNode):
 class AddressNode(TreeNode):
     def __init__(self, children=None, line_nr: int = -1) -> None:
         super().__init__("Address", children=children, line_nr=line_nr)
+
+
+class ConstNode(TreeNode):
+    def __init__(self, children=None, line_nr: int = -1) -> None:
+        super().__init__("Const", children=children, line_nr=line_nr)

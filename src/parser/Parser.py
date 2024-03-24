@@ -4,7 +4,7 @@ from src.antlr_files.compilerLexer import compilerLexer as CLexer
 from src.antlr_files.compilerParser import compilerParser as CParser, compilerParser
 from src.antlr_files.compilerVisitor import compilerVisitor as CVisitor
 
-from .TreeNode import *
+from src.parser.TreeNode import *
 
 
 class MyErrorListener(ErrorListener):
@@ -423,3 +423,5 @@ class ASTVisitor(CVisitor):
                 return BitNotNode(text, line_nr=node.symbol.line)
             case CParser.RETURN:
                 return ReturnNode(text, line_nr=node.symbol.line)
+            case CParser.CONST:
+                return ConstNode(line_nr=node.symbol.line)
