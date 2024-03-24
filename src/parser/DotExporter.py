@@ -3,17 +3,17 @@ from src.parser.TreeNode import TreeNode
 
 
 class DotExporter:
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     @staticmethod
-    def export(tree: TreeNode, output_path: str):
+    def export(tree: TreeNode, output_path: str) -> None:
         g = gv.Digraph(format="png")
         DotExporter._export(g, tree)
         g.render(output_path.replace(".dot", ""), view=True)
 
     @staticmethod
-    def _export(g: gv.Digraph, tree: TreeNode):
+    def _export(g: gv.Digraph, tree: TreeNode) -> None:
         g.node(str(id(tree)), tree.value)
         for child in tree.children:
             DotExporter._export(g, child)

@@ -17,12 +17,14 @@ class SymbolTableEntry:
         name: str,
         type: SymbolTableEntryType,
         const: bool = False,
+        declaration_line: int = -1,
         llvm_var=None,
     ) -> None:
         self.name: str = name
         self.type: SymbolTableEntryType = type
-        self.llvm_var = llvm_var
         self.const: bool = const
+        self.declaration_line = declaration_line
+        self.llvm_var = llvm_var
 
 
 class Table:
@@ -30,6 +32,12 @@ class Table:
         self.table: list[SymbolTableEntry] = []
         self.parent_id: int = parent_id
         self.type: SymbolTableEntryType = type  # TreeNode type
+
+    def __repr__(self) -> str:
+        string: str = ""
+        for entry in self.table:
+            string += f"id: {entry.name}, type: {entry.type.name}, constant: {entry.const}\n"
+        return string
 
     def add_entry(self, entry: SymbolTableEntry):
         self.table.append(entry)
@@ -78,6 +86,10 @@ def node_to_symbolTableEntryType(
         return SymbolTableEntryType.Bool
     if isinstance(node, NotNode):
         return SymbolTableEntryType.Bool
+    if isinstance(node, CharNode):
+        return SymbolTableEntryType.Char
+    if isinstance(node, BoolNode):
+        return SymbolTableEntryType.Bool
 
     raise ValueError(f"Invalid node type: {node.__class__.__name__}")
 
@@ -89,6 +101,18 @@ class SymbolTable:
         ]  # Root table of program is always at index 0
         self.current_idx: int = 0
 
+    def __str__(self):
+        string: str = ""
+        for table in self.tables:
+            string += f"index: {self.current_idx}\n"
+            string += (
+                f"------------------------------------------------------------------\n"
+            )
+            string += str(table) + "\n"
+            self.current_idx += 1
+        self.current_idx = 0
+        return string
+
     def build_symbol_table(self, tree: TreeNode) -> None:
         if isinstance(tree, MainNode):
             self.tables.append(Table(parent_id=self.current_idx))
@@ -97,12 +121,22 @@ class SymbolTable:
         if isinstance(tree, NewVariableNode):
             if self.find_entry_in_current_scope(tree.children[0].value):
                 raise ValueError(f"error: redefinition of '{tree.children[0].value}'")
-            self.tables[self.current_idx].add_entry(
-                SymbolTableEntry(
-                    tree.children[0].value,
-                    node_to_symbolTableEntryType(tree.children[1], self),
+            if isinstance(tree.children[0], ConstNode):
+                self.tables[self.current_idx].add_entry(
+                    SymbolTableEntry(
+                        tree.children[2].value,
+                        node_to_symbolTableEntryType(tree.children[3], self),
+                        True, tree.children[2].line_nr
+                    )
                 )
-            )
+            else:
+                self.tables[self.current_idx].add_entry(
+                    SymbolTableEntry(
+                        tree.children[1].value,
+                        node_to_symbolTableEntryType(tree.children[2], self),
+                        False, tree.children[2].line_nr
+                    )
+                )
         for child in tree.children:
             self.build_symbol_table(child)
 

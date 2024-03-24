@@ -1,21 +1,20 @@
 from antlr4 import *
+from src.parser.TreeNode import *
 from antlr4.error.ErrorListener import ErrorListener, ConsoleErrorListener
-from ..antlr_files.compilerLexer import compilerLexer as CLexer
-from ..antlr_files.compilerParser import compilerParser as CParser, compilerParser
-from ..antlr_files.compilerVisitor import compilerVisitor as CVisitor
-
-from .TreeNode import *
+from src.antlr_files.compilerLexer import compilerLexer as CLexer
+from src.antlr_files.compilerParser import compilerParser as CParser, compilerParser
+from src.antlr_files.compilerVisitor import compilerVisitor as CVisitor
 
 
 class MyErrorListener(ErrorListener):
-    def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
+    def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e) -> None:
         raise Exception(
             "Syntax error at line {0} column {1}: {2}".format(line, column, msg)
         )
 
 
 class Parser:
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     """
@@ -25,7 +24,7 @@ class Parser:
     """
 
     @staticmethod
-    def parse(input_file: str) -> TreeNode:
+    def parse(input_file: str, no_const_fold: bool, no_const_prop: bool) -> TreeNode:
         error_listener = MyErrorListener()
         lexer = CLexer(FileStream(input_file))
         lexer.removeErrorListener(ConsoleErrorListener.INSTANCE)
@@ -38,13 +37,12 @@ class Parser:
 
         tree: CParser.ProgContext = parser.prog()
 
-        return Parser.const_folding(Parser.convert_to_ast(ASTVisitor().visit(tree)))
-
-    """
-    TODO: remove None-nodes
-    TODO: remove unnecessary nodes (e.g. Nodes with 1 child) 
-    TODO: ...
-    """
+        ast = Parser.convert_to_ast(ASTVisitor().visit(tree))
+        if not no_const_prop:
+            pass  # TODO: implement constant propagation
+        if not no_const_fold:
+            ast = Parser.const_folding(ast)
+        return ast
 
     @staticmethod
     def convert_to_ast(cst: TreeNode) -> TreeNode | None:
@@ -58,7 +56,9 @@ class Parser:
         for child in cst.children:
             if len(child.children) == 1:
                 new_child = child.children[0]
-                if not isinstance(child, (ProgNode, ReturnNode, NotNode)):
+                if not isinstance(
+                    child, (ProgNode, PointerNode, AddressNode, ReturnNode, NotNode)
+                ):
                     idx = cst.children.index(child)
                     cst.children[idx] = new_child
 
@@ -291,7 +291,7 @@ class ASTVisitor(CVisitor):
 
         return ExprNode(line_nr=ctx.start.line, children=children)
 
-    def visitVariable(self, ctx: CParser.VariableContext):
+    def visitVariable(self, ctx: CParser.VariableContext) -> VariableNode:
         children = []
         for child in ctx.children:
             cstChild = self.visit(child)
@@ -301,7 +301,7 @@ class ASTVisitor(CVisitor):
 
         return VariableNode(line_nr=ctx.start.line, children=children)
 
-    def visitNewVariable(self, ctx: CParser.NewVariableContext):
+    def visitNewVariable(self, ctx: CParser.NewVariableContext) -> NewVariableNode:
         children = []
         for child in ctx.children:
             cstChild = self.visit(child)
@@ -311,27 +311,31 @@ class ASTVisitor(CVisitor):
 
         return NewVariableNode(line_nr=ctx.start.line, children=children)
 
-    def visitPointer(self, ctx: CParser.PointerContext):
+    def visitPointer(self, ctx: CParser.PointerContext) -> PointerNode:
         children = []
+        pointer_depth = 0
         for child in ctx.children:
             cstChild = self.visit(child)
             if cstChild is None:
                 continue
+            if isinstance(cstChild, MultNode):
+                pointer_depth += 1
+                continue
             children.append(cstChild)
 
-        return PointerNode(line_nr=ctx.start.line, children=children)
+        return PointerNode(pointer_depth, line_nr=ctx.start.line, children=children)
 
-    def visitAddress(self, ctx: CParser.AddressContext):
+    def visitAddress(self, ctx: CParser.AddressContext) -> AddressNode:
         children = []
         for child in ctx.children:
             cstChild = self.visit(child)
-            if cstChild is None:
+            if cstChild is None or isinstance(cstChild, AddressNode):
                 continue
             children.append(cstChild)
 
         return AddressNode(line_nr=ctx.start.line, children=children)
 
-    def visitAssignment(self, ctx: CParser.AssignmentContext):
+    def visitAssignment(self, ctx: CParser.AssignmentContext) -> AssignNode:
         children = []
         for child in ctx.children:
             cstChild = self.visit(child)
@@ -341,7 +345,7 @@ class ASTVisitor(CVisitor):
 
         return AssignNode(line_nr=ctx.start.line, children=children)
 
-    def visitLiteral(self, ctx: CParser.LiteralContext):
+    def visitLiteral(self, ctx: CParser.LiteralContext) -> LiteralNode:
         children = []
         for child in ctx.children:
             cstChild = self.visit(child)
@@ -351,7 +355,7 @@ class ASTVisitor(CVisitor):
 
         return LiteralNode(line_nr=ctx.start.line, children=children)
 
-    def visitTerminal(self, node: TerminalNode):
+    def visitTerminal(self, node: TerminalNode) -> TreeNode:
         text = node.getText()
 
         if text in operator_signs:
@@ -388,6 +392,8 @@ class ASTVisitor(CVisitor):
                     return OrNode(line_nr=node.symbol.line)
                 case "!":
                     return NotNode(line_nr=node.symbol.line)
+                case "&":
+                    return AddressNode(line_nr=node.symbol.line)
                 case _:
                     raise Exception(f"Unknown operator: {text}")
                 # TODO: Add more cases
@@ -399,6 +405,8 @@ class ASTVisitor(CVisitor):
             case CParser.STRING:
                 return StringNode(text, line_nr=node.symbol.line)
             case CParser.ID:
+                if text in ("true", "false"):
+                    return BoolNode(text, line_nr=node.symbol.line)
                 return IdNode(text, line_nr=node.symbol.line)
             case CParser.POINTER:
                 return PointerNode(text, line_nr=node.symbol.line)
@@ -412,3 +420,11 @@ class ASTVisitor(CVisitor):
                 return BitNotNode(text, line_nr=node.symbol.line)
             case CParser.RETURN:
                 return ReturnNode(text, line_nr=node.symbol.line)
+            case CParser.CONST:
+                return ConstNode(line_nr=node.symbol.line)
+            case CParser.CHAR:
+                return CharNode(text, line_nr=node.symbol.line)
+            case CParser.TYPE:
+                return TypeNode(text, line_nr=node.symbol.line)
+            case CParser.BOOL:
+                return BoolNode(text, line_nr=node.symbol.line)

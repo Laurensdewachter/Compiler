@@ -1,6 +1,6 @@
 from llvmlite import ir, binding
-from ..parser.TreeNode import *
-from src.main.SymbolTable import SymbolTable, SymbolTableEntryType
+from src.parser.TreeNode import *
+from src.parser.SymbolTable import SymbolTable, SymbolTableEntryType
 import subprocess
 
 
