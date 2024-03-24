@@ -26,6 +26,7 @@ expr:
 	| expr ('<=' | '>=' | '!=') expr
 	| literal
 	| pointer
+	| RETURN expr
 	| address
 	| variable
 	| LPAREN expr RPAREN
@@ -61,9 +62,9 @@ literal: FLOAT | INT | CHAR | STRING | BOOL;
 
 WS: [ \t\n\r]+ -> skip; // toss out whitespace
 INCLUDE: '#include';
+RETURN: 'return';
 BREAK: 'break';
 CONTINUE: 'continue';
-RETURN: 'return';
 FOR: 'for';
 SEMI: ';';
 COMMA: ',';

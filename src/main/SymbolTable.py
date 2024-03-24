@@ -1,6 +1,6 @@
 from enum import Enum
-
 from src.parser.TreeNode import *
+from llvmlite import ir
 
 
 class SymbolTableEntryType(Enum):
@@ -17,13 +17,11 @@ class SymbolTableEntry:
         name: str,
         type: SymbolTableEntryType,
         const: bool = False,
-        offset: int = 0,
+        llvm_var=None,
     ) -> None:
         self.name: str = name
         self.type: SymbolTableEntryType = type
-        self.offset: int = (
-            offset  # is this necessary? Might be useful for memory allocation
-        )
+        self.llvm_var = llvm_var
         self.const: bool = const
 
 
@@ -60,6 +58,27 @@ def node_to_symbolTableEntryType(
         return node_to_symbolTableEntryType(node.children[0], symbol_table)
     if isinstance(node, IdNode):
         return symbol_table.find_entry(node.value).type
+    if isinstance(node, EqualNode):
+        return SymbolTableEntryType.Bool
+    if isinstance(node, NeqNode):
+        return SymbolTableEntryType.Bool
+    if isinstance(node, LtNode):
+        return SymbolTableEntryType.Bool
+    if isinstance(node, GtNode):
+        return SymbolTableEntryType.Bool
+    if isinstance(node, LeqNode):
+        return SymbolTableEntryType.Bool
+    if isinstance(node, GeqNode):
+        return SymbolTableEntryType.Bool
+    if isinstance(node, ModNode):
+        return SymbolTableEntryType.Int
+    if isinstance(node, AndNode):
+        return SymbolTableEntryType.Bool
+    if isinstance(node, OrNode):
+        return SymbolTableEntryType.Bool
+    if isinstance(node, NotNode):
+        return SymbolTableEntryType.Bool
+
     raise ValueError(f"Invalid node type: {node.__class__.__name__}")
 
 

@@ -9,6 +9,17 @@ class ProgNode(TreeNode):
     def __init__(self, children=None, line_nr: int = -1):
         super().__init__("Prog", children=children, line_nr=line_nr)
 
+
+class EqualNode(TreeNode):
+    def __init__(self, children=None, line_nr: int = -1):
+        super().__init__("Equal", children=children, line_nr=line_nr)
+
+
+class ReturnNode(TreeNode):
+    def __init__(self, children=None, line_nr: int = -1):
+        super().__init__("Return", children=children, line_nr=line_nr)
+
+
 class MainNode(TreeNode):
     def __init__(self, children=None, line_nr: int = None):
         super().__init__("Main", children=children, line_nr=line_nr)
@@ -102,6 +113,11 @@ class ModNode(TreeNode):
 class LShiftNode(TreeNode):
     def __init__(self, children=None, line_nr: int = -1):
         super().__init__("<<", children=children, line_nr=line_nr)
+
+
+class NotNode(TreeNode):
+    def __init__(self, children=None, line_nr: int = -1):
+        super().__init__("!", children=children, line_nr=line_nr)
 
 
 class RShiftNode(TreeNode):

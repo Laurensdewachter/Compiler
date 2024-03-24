@@ -58,7 +58,7 @@ class Parser:
         for child in cst.children:
             if len(child.children) == 1:
                 new_child = child.children[0]
-                if not isinstance(child, ProgNode):
+                if not isinstance(child, (ProgNode, ReturnNode, NotNode)):
                     idx = cst.children.index(child)
                     cst.children[idx] = new_child
 
@@ -136,7 +136,9 @@ class Parser:
             for child in cst.children:
                 if len(child.children) == 1:
                     new_child = child.children[0]
-                    if not isinstance(child, (StatNode, ProgNode, MainNode)):
+                    if not isinstance(
+                        child, (StatNode, ProgNode, MainNode, ReturnNode, NotNode)
+                    ):
                         idx = cst.children.index(child)
                         cst.children[idx] = new_child
 
@@ -159,6 +161,7 @@ operator_signs = {
     "%",
     ">>",
     "<<",
+    "!",
 }
 
 
@@ -248,6 +251,43 @@ class ASTVisitor(CVisitor):
                 return BitNotNode(
                     line_nr=ctx.start.line, children=[children[0], children[2]]
                 )
+            elif isinstance(middle, EqualNode):
+                return EqualNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+            elif isinstance(middle, NeqNode):
+                return NeqNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+            elif isinstance(middle, LtNode):
+                return LtNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+            elif isinstance(middle, GtNode):
+                return GtNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+            elif isinstance(middle, LeqNode):
+                return LeqNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+            elif isinstance(middle, GeqNode):
+                return GeqNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+            elif isinstance(middle, AndNode):
+                return AndNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+            elif isinstance(middle, OrNode):
+                return OrNode(
+                    line_nr=ctx.start.line, children=[children[0], children[2]]
+                )
+        if len(children) == 2:
+            if isinstance(children[0], ReturnNode):
+                return ReturnNode(line_nr=ctx.start.line, children=[children[1]])
+            if isinstance(children[0], NotNode):
+                return NotNode(line_nr=ctx.start.line, children=[children[1]])
 
         return ExprNode(line_nr=ctx.start.line, children=children)
 
@@ -330,6 +370,26 @@ class ASTVisitor(CVisitor):
                     return RShiftNode(line_nr=node.symbol.line)
                 case "<<":
                     return LShiftNode(line_nr=node.symbol.line)
+                case "==":
+                    return EqualNode(line_nr=node.symbol.line)
+                case "!=":
+                    return NeqNode(line_nr=node.symbol.line)
+                case "<":
+                    return LtNode(line_nr=node.symbol.line)
+                case ">":
+                    return GtNode(line_nr=node.symbol.line)
+                case "<=":
+                    return LeqNode(line_nr=node.symbol.line)
+                case ">=":
+                    return GeqNode(line_nr=node.symbol.line)
+                case "&&":
+                    return AndNode(line_nr=node.symbol.line)
+                case "||":
+                    return OrNode(line_nr=node.symbol.line)
+                case "!":
+                    return NotNode(line_nr=node.symbol.line)
+                case _:
+                    raise Exception(f"Unknown operator: {text}")
                 # TODO: Add more cases
         match node.symbol.type:
             case CParser.INT:
@@ -350,3 +410,5 @@ class ASTVisitor(CVisitor):
                 return BitXorNode(text, line_nr=node.symbol.line)
             case CParser.BITNOT:
                 return BitNotNode(text, line_nr=node.symbol.line)
+            case CParser.RETURN:
+                return ReturnNode(text, line_nr=node.symbol.line)
