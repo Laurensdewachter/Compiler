@@ -406,15 +406,18 @@ class LlvmConverter:
             case NewVariableNode():
                 builder = self.builders[-1]
 
-                symbol_table_entry = self.symbol_table.find_entry(
-                    node.children[0].value
-                )
+                const_var: bool = len(node.children) == 4
 
-                var_type = node_to_llvmtype(node.children[1], self.symbol_table)
-                var = builder.alloca(var_type, name=node.children[0].value)
+                var_name = (
+                    node.children[2].value if const_var else node.children[1].value
+                )
+                symbol_table_entry = self.symbol_table.find_entry(var_name)
+
+                var_type = node_to_llvmtype(node.children[2], self.symbol_table)
+                var = builder.alloca(var_type, name=var_name)
 
                 symbol_table_entry.llvm_var = var
-                value = node.children[1]
+                value = node.children[3] if const_var else node.children[2]
 
                 self.store_value(value, var)
 
