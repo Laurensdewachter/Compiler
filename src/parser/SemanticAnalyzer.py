@@ -1,18 +1,20 @@
 from src.parser.TreeNode import *
-from src.parser.SymbolTable import SymbolTable, node_to_symbolTableEntryType
+from src.parser.SymbolTable import (
+    SymbolTable,
+    node_to_symbolTableEntryType,
+    SymbolTableEntryType,
+)
 
 
-def match_type(node: TreeNode) -> str:
+def match_type(node: TreeNode) -> SymbolTableEntryType:
     if isinstance(node, IntNode):
-        return "int"
+        return SymbolTableEntryType.Int
     elif isinstance(node, FloatNode):
-        return "float"
+        return SymbolTableEntryType.Float
     elif isinstance(node, CharNode):
-        return "char"
+        return SymbolTableEntryType.Char
     elif isinstance(node, BoolNode):
-        return "bool"
-    else:
-        return "undefined"
+        return SymbolTableEntryType.Bool
 
 
 class SemanticAnalyzer:
@@ -49,23 +51,24 @@ class SemanticAnalyzer:
                 case "int":
                     if not isinstance(value_node, (FloatNode, IntNode, CharNode)):
                         errors.append(
-                            f"Variable '{id_node.value}' on line {id_node.line_nr} was declared as an int, but used as {match_type(value_node)}."
+                            f"Variable '{id_node.value}' on line {id_node.line_nr} was declared as an int, but used as {match_type(value_node).name}."
                         )
                 case "float":
                     if not isinstance(value_node, (FloatNode, IntNode, CharNode)):
                         errors.append(
-                            f"Variable '{id_node.value}' on line {id_node.line_nr} was declared as a float but used as a {match_type(value_node)}."
+                            f"Variable '{id_node.value}' on line {id_node.line_nr} was declared as a float but used as a {match_type(value_node).name}."
                         )
                 case "char":
                     if not isinstance(value_node, (FloatNode, IntNode, CharNode)):
                         errors.append(
-                            f"Variable '{id_node.value}' on line {id_node.line_nr} was declared as a char but used as a {match_type(value_node)}."
+                            f"Variable '{id_node.value}' on line {id_node.line_nr} was declared as a char but used as a {match_type(value_node).name}."
                         )
                 case "bool":
                     if not isinstance(value_node, BoolNode):
                         errors.append(
-                            f"Variable '{id_node.value}' on line {id_node.line_nr} was declared as a char but used as a {match_type(value_node)}."
+                            f"Variable '{id_node.value}' on line {id_node.line_nr} was declared as a bool but used as a {match_type(value_node).name}."
                         )
+
         # Check for incorrect type definitions at assignments of existing variables
         if isinstance(ast, AssignNode):
             id_node = ast.children[0]
@@ -76,6 +79,27 @@ class SemanticAnalyzer:
             ):
                 errors.append(
                     f"Assignment of '{id_node.value}' on line {id_node.line_nr} does not match type {table_entry.type.name} defined in line {table_entry.declaration_line}."
+                )
+
+        # Check for incompatible types in operations
+        if isinstance(ast, (PlusNode, MinusNode, MultNode, DivNode, ModNode)):
+            left_node = ast.children[0]
+            right_node = ast.children[1]
+            if isinstance(left_node, IdNode):
+                left_type = symbol_table.find_entry(left_node.value).type
+            else:
+                left_type = match_type(left_node)
+            if isinstance(right_node, IdNode):
+                right_type = symbol_table.find_entry(right_node.value).type
+            else:
+                right_type = match_type(right_node)
+
+            if left_type != right_type and not (
+                left_type in (SymbolTableEntryType.Int, SymbolTableEntryType.Float)
+                and right_type in (SymbolTableEntryType.Int, SymbolTableEntryType.Float)
+            ):
+                errors.append(
+                    f"Operation between {left_type.name} and {right_type.name} at line {ast.line_nr} is not supported."
                 )
 
         for child in ast.children:
