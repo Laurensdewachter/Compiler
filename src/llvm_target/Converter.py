@@ -459,6 +459,8 @@ class LlvmConverter:
             case PrintfNode():
                 builder = self.builders[-1]
                 printf_str = node.children[0].value[1:-1]
+                printf_str = printf_str.replace("\\n", "\x0A")
+                printf_str += "\00"
 
                 fmt_str = ir.GlobalVariable(
                     self.module,
