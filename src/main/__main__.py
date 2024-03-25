@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     if target_llvm:
         # Generate llvm target
-        converter = LlvmConverter(symbol_table)
+        converter = LlvmConverter(symbol_table, input_file)
         converter.convert(ast)
 
         with open(target_llvm, "w") as f:

@@ -72,7 +72,7 @@ def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
 
 
 class LlvmConverter:
-    def __init__(self, symbol_table: SymbolTable):
+    def __init__(self, symbol_table: SymbolTable, input_file_path: str):
         self.blocks = []
         self.builders = []
 
@@ -82,12 +82,29 @@ class LlvmConverter:
         )
         self.module = ir.Module("module")
         self.module.triple = target_triple
+        self.input_file_lines = open(input_file_path).readlines()
+
+        self.commented_lines = {}
 
         voidptr_ty = ir.IntType(8).as_pointer()
         printf_ty = ir.FunctionType(ir.IntType(32), [voidptr_ty], var_arg=True)
         printf = ir.Function(self.module, printf_ty, name="printf")
 
         self.symbol_table = symbol_table
+
+    def add_statement_comment(self, node: TreeNode) -> None:
+        if node.line_nr is None:
+            return
+        if node.line_nr in self.commented_lines:
+            return
+        self.commented_lines[node.line_nr] = True
+        try:
+            builder = self.builders[-1]
+        except:
+            return
+        # get line from input file
+        line = self.input_file_lines[node.line_nr - 1].strip()
+        builder.comment(f"Line {node.line_nr}: {line}")
 
     def store_value(self, value: TreeNode, llvm_var: ir.Value) -> None:
         """
@@ -541,6 +558,7 @@ class LlvmConverter:
                         raise Exception(
                             f"Unknown type at Generation of return: {node.children[0]}"
                         )
+        self.add_statement_comment(node)
 
         for child in node.children:
             self.convert(child)
