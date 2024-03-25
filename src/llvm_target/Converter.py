@@ -340,6 +340,8 @@ class LlvmConverter:
             case NotNode():
                 child = self.node_to_llvm(node.children[0])
                 return builder.not_(child)
+            case CharNode():
+                return ir.Constant(ir.IntType(8), ord(node.value[1:-1]))
             case _:
                 raise Exception(f"Unknown type: {node}")
 
