@@ -1,7 +1,7 @@
 from llvmlite import ir, binding
-from src.parser.TreeNode import *
 from src.parser.SymbolTable import SymbolTable, SymbolTableEntryType
 import subprocess
+from src.parser.TreeNode import *
 
 
 def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
@@ -404,13 +404,36 @@ class LlvmConverter:
                 self.store_value(value, assignee)
 
             case NewVariableNode():
-                builder = self.builders[-1]
-
                 const_var: bool = len(node.children) == 4
-
                 var_name = (
                     node.children[2].value if const_var else node.children[1].value
                 )
+
+                try:
+                    builder = self.builders[-1]
+                except:
+                    # global variable
+                    var = ir.GlobalVariable(
+                        self.module,
+                        node_to_llvmtype(node.children[2], self.symbol_table),
+                        var_name,
+                    )
+                    value_ast = node.children[3] if const_var else node.children[2]
+                    match value_ast:
+                        case IntNode():
+                            value = ir.Constant(ir.IntType(32), int(value_ast.value))
+                        case FloatNode():
+                            value = ir.Constant(ir.FloatType(), float(value_ast.value))
+                        case CharNode():
+                            value = ir.Constant(
+                                ir.ArrayType(ir.IntType(8), 1),
+                                bytearray(value_ast.value.encode("utf-8")),
+                            )
+                        case _:
+                            raise Exception("Converter.py:433")
+                    var.initializer = value
+                    return
+
                 symbol_table_entry = self.symbol_table.find_entry(var_name)
 
                 var_type = node_to_llvmtype(node.children[2], self.symbol_table)
