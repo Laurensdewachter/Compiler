@@ -50,6 +50,8 @@ def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
             return ir.IntType(1)
         case ModNode():
             return ir.IntType(32)
+        case CharNode():
+            return ir.IntType(8)
         case IdNode():
             symbol_table_type = symbol_table.find_entry(node.value).type
             match symbol_table_type:
@@ -61,6 +63,8 @@ def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
                     return ir.ArrayType(ir.IntType(8), 0)
                 case SymbolTableEntryType.Bool:
                     return ir.IntType(1)
+                case SymbolTableEntryType.Char:
+                    return ir.IntType(8)
                 case _:
                     raise Exception(f"Unknown type: {symbol_table_type}")
         case _:
@@ -106,6 +110,10 @@ class LlvmConverter:
                         bytearray(value.value.encode("utf-8")),
                     ),
                     llvm_var,
+                )
+            case CharNode():
+                builder.store(
+                    ir.Constant(ir.IntType(8), ord(value.value[1:-1])), llvm_var
                 )
             case IdNode():
                 builder.store(

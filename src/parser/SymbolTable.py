@@ -64,6 +64,8 @@ def node_to_symbolTableEntryType(
         return SymbolTableEntryType.Float
     if isinstance(node, StringNode):
         return SymbolTableEntryType.String
+    if isinstance(node, CharNode):
+        return SymbolTableEntryType.Char
     if isinstance(node, (PlusNode, MultNode, DivNode, MinusNode)):
         return node_to_symbolTableEntryType(node.children[0], symbol_table)
     if isinstance(node, IdNode):
