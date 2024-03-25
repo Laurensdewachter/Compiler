@@ -447,3 +447,7 @@ class ASTVisitor(CVisitor):
                 return TypeNode(text, line_nr=node.symbol.line)
             case CParser.BOOL:
                 return BoolNode(text, line_nr=node.symbol.line)
+            case CParser.LINE_COMMENT:
+                return CommentNode(text, line_nr=node.symbol.line)
+            case CParser.COMMENT:
+                return CommentNode(text, line_nr=node.symbol.line)

@@ -489,6 +489,17 @@ class LlvmConverter:
                     args,
                 )
 
+            case CommentNode():
+                comment_value = node.value[2:]
+                # split comment into multiple lines
+                comment_lines = comment_value.split("\n")
+
+                builder = self.builders[-1]
+                for comment_line in comment_lines:
+                    if comment_line.strip() == "*/" or comment_line == "":
+                        continue
+                    builder.comment(comment_line)
+
             case ReturnNode():
                 builder = self.builders[-1]
 
