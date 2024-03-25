@@ -25,6 +25,7 @@ expr:
 	| expr '==' expr
 	| expr ('<=' | '>=' | '!=') expr
 	| literal
+	| printf
 	| pointer
 	| RETURN expr
 	| address
@@ -41,6 +42,8 @@ expr:
 	| expr BITNOT expr;
 
 variable: ID;
+
+printf: PRINTF LPAREN STRING (COMMA expr)* RPAREN;
 
 main: TYPE 'main' LPAREN RPAREN LBRACKET stat* RBRACKET;
 
@@ -63,6 +66,7 @@ literal: FLOAT | INT | CHAR | STRING | BOOL;
 
 WS: [ \t\n\r]+ -> skip; // toss out whitespace
 INCLUDE: '#include';
+PRINTF: 'printf';
 RETURN: 'return';
 BREAK: 'break';
 CONTINUE: 'continue';

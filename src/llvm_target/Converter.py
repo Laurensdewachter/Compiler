@@ -50,6 +50,8 @@ def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
             return ir.IntType(1)
         case ModNode():
             return ir.IntType(32)
+        case CharNode():
+            return ir.IntType(8)
         case IdNode():
             symbol_table_type = symbol_table.find_entry(node.value).type
             match symbol_table_type:
@@ -61,6 +63,8 @@ def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
                     return ir.ArrayType(ir.IntType(8), 0)
                 case SymbolTableEntryType.Bool:
                     return ir.IntType(1)
+                case SymbolTableEntryType.Char:
+                    return ir.IntType(8)
                 case _:
                     raise Exception(f"Unknown type: {symbol_table_type}")
         case _:
@@ -78,6 +82,10 @@ class LlvmConverter:
         )
         self.module = ir.Module("module")
         self.module.triple = target_triple
+
+        voidptr_ty = ir.IntType(8).as_pointer()
+        printf_ty = ir.FunctionType(ir.IntType(32), [voidptr_ty], var_arg=True)
+        printf = ir.Function(self.module, printf_ty, name="printf")
 
         self.symbol_table = symbol_table
 
@@ -102,6 +110,10 @@ class LlvmConverter:
                         bytearray(value.value.encode("utf-8")),
                     ),
                     llvm_var,
+                )
+            case CharNode():
+                builder.store(
+                    ir.Constant(ir.IntType(8), ord(value.value[1:-1])), llvm_var
                 )
             case IdNode():
                 builder.store(
@@ -443,6 +455,37 @@ class LlvmConverter:
                 value = node.children[3] if const_var else node.children[2]
 
                 self.store_value(value, var)
+
+            case PrintfNode():
+                builder = self.builders[-1]
+                printf_str = node.children[0].value[1:-1]
+
+                fmt_str = ir.GlobalVariable(
+                    self.module,
+                    ir.ArrayType(ir.IntType(8), len(printf_str)),
+                    name=f".str{id(node)}",
+                )
+
+                fmt_str.initializer = ir.Constant(
+                    ir.ArrayType(ir.IntType(8), len(printf_str)),
+                    bytearray(printf_str.encode("utf-8")),
+                )
+
+                fmt_str_pointer = builder.bitcast(
+                    fmt_str, ir.PointerType(ir.IntType(8), 0), name="fmt_str"
+                )
+
+                vars = [child for child in node.children[1:]]
+                llvm_vars = []
+                for var in vars:
+                    llvm_vars.append(self.node_to_llvm(var))
+
+                args = [fmt_str_pointer] + llvm_vars
+
+                builder.call(
+                    self.module.get_global("printf"),
+                    args,
+                )
 
             case ReturnNode():
                 builder = self.builders[-1]
