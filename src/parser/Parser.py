@@ -62,6 +62,50 @@ class Parser:
                     idx = cst.children.index(child)
                     cst.children[idx] = new_child
 
+        # Implicit conversions
+        if isinstance(cst, NewVariableNode):
+            type_node = cst.children[0]
+            value_node = cst.children[2]
+            constant = False
+            if isinstance(type_node, ConstNode):
+                constant = True
+                type_node = cst.children[1]
+                value_node = cst.children[3]
+            if type_node.value == "int" and isinstance(value_node, FloatNode):
+                print(
+                    f"Warning: Conversion from type float to int on line {type_node.line_nr} may cause loss of information."
+                )
+                new_node = IntNode(
+                    str(int(float(value_node.value))), value_node.children, value_node.line_nr
+                )
+                if constant:
+                    cst.children[3] = new_node
+                else:
+                    cst.children[2] = new_node
+            if type_node.value == "char":
+                if isinstance(value_node, FloatNode):
+                    print(
+                        f"Warning: Conversion from type float to char on line {type_node.line_nr} may cause loss of information."
+                    )
+                    new_node = CharNode(
+                        str(chr(int(float(value_node.value)))), value_node.children, value_node.line_nr
+                    )
+                    if constant:
+                        cst.children[3] = new_node
+                    else:
+                        cst.children[2] = new_node
+                elif isinstance(value_node, IntNode):
+                    print(
+                        f"Warning: Conversion from type int to char on line {type_node.line_nr} may cause loss of information."
+                    )
+                    new_node = CharNode(
+                        str(chr(int(value_node.value))), value_node.children, value_node.line_nr
+                    )
+                    if constant:
+                        cst.children[3] = new_node
+                    else:
+                        cst.children[2] = new_node
+
         return cst
 
     @staticmethod
