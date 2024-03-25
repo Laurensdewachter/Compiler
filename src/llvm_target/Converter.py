@@ -79,6 +79,10 @@ class LlvmConverter:
         self.module = ir.Module("module")
         self.module.triple = target_triple
 
+        voidptr_ty = ir.IntType(8).as_pointer()
+        printf_ty = ir.FunctionType(ir.IntType(32), [voidptr_ty], var_arg=True)
+        printf = ir.Function(self.module, printf_ty, name="printf")
+
         self.symbol_table = symbol_table
 
     def store_value(self, value: TreeNode, llvm_var: ir.Value) -> None:
@@ -443,6 +447,37 @@ class LlvmConverter:
                 value = node.children[3] if const_var else node.children[2]
 
                 self.store_value(value, var)
+
+            case PrintfNode():
+                builder = self.builders[-1]
+                printf_str = node.children[0].value[1:-1]
+
+                fmt_str = ir.GlobalVariable(
+                    self.module,
+                    ir.ArrayType(ir.IntType(8), len(printf_str)),
+                    name=f".str{id(node)}",
+                )
+
+                fmt_str.initializer = ir.Constant(
+                    ir.ArrayType(ir.IntType(8), len(printf_str)),
+                    bytearray(printf_str.encode("utf-8")),
+                )
+
+                fmt_str_pointer = builder.bitcast(
+                    fmt_str, ir.PointerType(ir.IntType(8), 0), name="fmt_str"
+                )
+
+                vars = [child for child in node.children[1:]]
+                llvm_vars = []
+                for var in vars:
+                    llvm_vars.append(self.node_to_llvm(var))
+
+                args = [fmt_str_pointer] + llvm_vars
+
+                builder.call(
+                    self.module.get_global("printf"),
+                    args,
+                )
 
             case ReturnNode():
                 builder = self.builders[-1]
