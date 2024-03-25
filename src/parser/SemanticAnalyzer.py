@@ -102,6 +102,14 @@ class SemanticAnalyzer:
                     f"Operation between {left_type.name} and {right_type.name} at line {ast.line_nr} is not supported."
                 )
 
+        if isinstance(ast, AssignNode):
+            id_node = ast.children[0]
+            table_entry = symbol_table.find_entry(id_node.value)
+            if table_entry is not None and table_entry.const:
+                errors.append(
+                    f"Reassignment of constant variable '{id_node.value}' on line {id_node.line_nr}."
+                )
+
         for child in ast.children:
             SemanticAnalyzer.analyze(child, symbol_table, errors)
 

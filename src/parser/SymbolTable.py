@@ -102,6 +102,8 @@ class SymbolTable:
         self.current_idx: int = 0
 
     def __str__(self):
+        starting_index = self.current_idx
+        self.current_idx = 0
         string: str = ""
         for table in self.tables:
             string += f"index: {self.current_idx}\n"
@@ -110,7 +112,7 @@ class SymbolTable:
             )
             string += str(table) + "\n"
             self.current_idx += 1
-        self.current_idx = 0
+        self.current_idx = starting_index
         return string
 
     def build_symbol_table(self, tree: TreeNode) -> None:
