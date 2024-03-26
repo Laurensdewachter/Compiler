@@ -35,11 +35,13 @@ if __name__ == "__main__":
     symbol_table: SymbolTable = SymbolTable()
     symbol_table.build_symbol_table(ast)
     # Analyze semantic
-    # semantic_errors: list[str] = SemanticAnalyzer.analyze(ast, symbol_table)
-    # for error in semantic_errors:
-    #     print(error)
-    # if semantic_errors:
-    #     quit(-1)
+    semantic_errors, warnings = SemanticAnalyzer.analyze(ast, symbol_table)
+    for error in semantic_errors:
+        print(error)
+    for warning in warnings:
+        print(warning)
+    if semantic_errors:
+        quit(-1)
 
     if ast_file:
         DotExporter.export(ast, ast_file)
