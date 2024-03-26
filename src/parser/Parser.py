@@ -1,3 +1,5 @@
+import copy
+
 from antlr4 import *
 from src.parser.TreeNode import *
 from antlr4.error.ErrorListener import ErrorListener, ConsoleErrorListener
@@ -72,6 +74,56 @@ class Parser:
                 ):
                     idx = cst.children.index(child)
                     cst.children[idx] = new_child
+
+        # Implicit conversions
+        if isinstance(cst, NewVariableNode):
+            type_node = cst.children[0]
+            value_node = cst.children[2]
+            constant = False
+            if isinstance(type_node, ConstNode):
+                constant = True
+                type_node = cst.children[1]
+                value_node = cst.children[3]
+            if type_node.value == "int" and isinstance(value_node, FloatNode):
+                print(
+                    f"Warning: Conversion from type float to int on line {type_node.line_nr} may cause loss of information."
+                )
+                new_node = IntNode(
+                    str(int(float(value_node.value))),
+                    value_node.children,
+                    value_node.line_nr,
+                )
+                if constant:
+                    cst.children[3] = new_node
+                else:
+                    cst.children[2] = new_node
+            if type_node.value == "char":
+                if isinstance(value_node, FloatNode):
+                    print(
+                        f"Warning: Conversion from type float to char on line {type_node.line_nr} may cause loss of information."
+                    )
+                    new_node = CharNode(
+                        str(chr(int(float(value_node.value)))),
+                        value_node.children,
+                        value_node.line_nr,
+                    )
+                    if constant:
+                        cst.children[3] = new_node
+                    else:
+                        cst.children[2] = new_node
+                elif isinstance(value_node, IntNode):
+                    print(
+                        f"Warning: Conversion from type int to char on line {type_node.line_nr} may cause loss of information."
+                    )
+                    new_node = CharNode(
+                        str(chr(int(value_node.value))),
+                        value_node.children,
+                        value_node.line_nr,
+                    )
+                    if constant:
+                        cst.children[3] = new_node
+                    else:
+                        cst.children[2] = new_node
 
         return cst
 
@@ -313,6 +365,40 @@ class ASTVisitor(CVisitor):
 
         return VariableNode(line_nr=ctx.start.line, children=children)
 
+    def visitUnaryplusplus(self, ctx: CParser.UnaryplusplusContext) -> AssignNode:
+        if ctx.children[0].getText() == "++":
+            var = self.visit(ctx.children[1])
+        else:
+            var = self.visit(ctx.children[0])
+
+        return AssignNode(
+            line_nr=ctx.start.line,
+            children=[
+                var,
+                PlusNode(
+                    [copy.deepcopy(var), IntNode("1", line_nr=ctx.start.line)],
+                    line_nr=ctx.start.line,
+                ),
+            ],
+        )
+
+    def visitUnaryminusminus(self, ctx: CParser.UnaryminusminusContext) -> AssignNode:
+        if ctx.children[0].getText() == "--":
+            var = self.visit(ctx.children[1])
+        else:
+            var = self.visit(ctx.children[0])
+
+        return AssignNode(
+            line_nr=ctx.start.line,
+            children=[
+                var,
+                MinusNode(
+                    [copy.deepcopy(var), IntNode("1", line_nr=ctx.start.line)],
+                    line_nr=ctx.start.line,
+                ),
+            ],
+        )
+
     def visitNewVariable(self, ctx: CParser.NewVariableContext) -> NewVariableNode:
         children = []
         for child in ctx.children:
@@ -474,3 +560,7 @@ class ASTVisitor(CVisitor):
                 return CommentNode(text, line_nr=node.symbol.line)
             case CParser.COMMENT:
                 return CommentNode(text, line_nr=node.symbol.line)
+            case CParser.PLUSPLUS:
+                return UnaryPlusNode(text, line_nr=node.symbol.line)
+            case CParser.MINUSMINUS:
+                return UnaryMinusNode(text, line_nr=node.symbol.line)
