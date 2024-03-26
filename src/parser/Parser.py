@@ -57,7 +57,15 @@ class Parser:
             if len(child.children) == 1:
                 new_child = child.children[0]
                 if not isinstance(
-                    child, (ProgNode, PointerNode, AddressNode, ReturnNode, NotNode)
+                    child,
+                    (
+                        ProgNode,
+                        PointerNode,
+                        AddressNode,
+                        ReturnNode,
+                        NotNode,
+                        PrintfNode,
+                    ),
                 ):
                     idx = cst.children.index(child)
                     cst.children[idx] = new_child
@@ -181,7 +189,8 @@ class Parser:
                 if len(child.children) == 1:
                     new_child = child.children[0]
                     if not isinstance(
-                        child, (StatNode, ProgNode, MainNode, ReturnNode, NotNode)
+                        child,
+                        (StatNode, ProgNode, MainNode, ReturnNode, NotNode, PrintfNode),
                     ):
                         idx = cst.children.index(child)
                         cst.children[idx] = new_child
@@ -239,6 +248,16 @@ class ASTVisitor(CVisitor):
             children.append(cstChild)
 
         return StatNode(line_nr=ctx.start.line, children=children)
+
+    def visitPrintf(self, ctx: compilerParser.PrintfContext):
+        children = []
+        for child in ctx.children:
+            cstChild = self.visit(child)
+            if cstChild is None:
+                continue
+            children.append(cstChild)
+
+        return PrintfNode(line_nr=ctx.start.line, children=children)
 
     def visitExpr(self, ctx: CParser.ExprContext):
         children = []
@@ -472,3 +491,7 @@ class ASTVisitor(CVisitor):
                 return TypeNode(text, line_nr=node.symbol.line)
             case CParser.BOOL:
                 return BoolNode(text, line_nr=node.symbol.line)
+            case CParser.LINE_COMMENT:
+                return CommentNode(text, line_nr=node.symbol.line)
+            case CParser.COMMENT:
+                return CommentNode(text, line_nr=node.symbol.line)

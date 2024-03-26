@@ -175,6 +175,11 @@ class StringNode(TreeNode):
         super().__init__(value, children=children, line_nr=line_nr)
 
 
+class CommentNode(TreeNode):
+    def __init__(self, value: str, children=None, line_nr: int = -1) -> None:
+        super().__init__(value, children=children, line_nr=line_nr)
+
+
 class IdNode(TreeNode):
     def __init__(self, value: str, children=None, line_nr: int = -1) -> None:
         super().__init__(value, children=children, line_nr=line_nr)
@@ -193,6 +198,11 @@ class AddressNode(TreeNode):
 class ConstNode(TreeNode):
     def __init__(self, children=None, line_nr: int = -1) -> None:
         super().__init__("Const", children=children, line_nr=line_nr)
+
+
+class PrintfNode(TreeNode):
+    def __init__(self, children=None, line_nr: int = -1) -> None:
+        super().__init__("Printf", children=children, line_nr=line_nr)
 
 
 class CharNode(TreeNode):

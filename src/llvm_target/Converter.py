@@ -1,7 +1,7 @@
 from llvmlite import ir, binding
-from src.parser.TreeNode import *
 from src.parser.SymbolTable import SymbolTable, SymbolTableEntryType
 import subprocess
+from src.parser.TreeNode import *
 
 
 def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
@@ -50,6 +50,8 @@ def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
             return ir.IntType(1)
         case ModNode():
             return ir.IntType(32)
+        case CharNode():
+            return ir.IntType(8)
         case IdNode():
             symbol_table_type = symbol_table.find_entry(node.value).type
             match symbol_table_type:
@@ -61,6 +63,8 @@ def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
                     return ir.ArrayType(ir.IntType(8), 0)
                 case SymbolTableEntryType.Bool:
                     return ir.IntType(1)
+                case SymbolTableEntryType.Char:
+                    return ir.IntType(8)
                 case _:
                     raise Exception(f"Unknown type: {symbol_table_type}")
         case _:
@@ -68,7 +72,7 @@ def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
 
 
 class LlvmConverter:
-    def __init__(self, symbol_table: SymbolTable):
+    def __init__(self, symbol_table: SymbolTable, input_file_path: str):
         self.blocks = []
         self.builders = []
 
@@ -78,8 +82,29 @@ class LlvmConverter:
         )
         self.module = ir.Module("module")
         self.module.triple = target_triple
+        self.input_file_lines = open(input_file_path).readlines()
+
+        self.commented_lines = {}
+
+        voidptr_ty = ir.IntType(8).as_pointer()
+        printf_ty = ir.FunctionType(ir.IntType(32), [voidptr_ty], var_arg=True)
+        printf = ir.Function(self.module, printf_ty, name="printf")
 
         self.symbol_table = symbol_table
+
+    def add_statement_comment(self, node: TreeNode) -> None:
+        if node.line_nr is None:
+            return
+        if node.line_nr in self.commented_lines:
+            return
+        self.commented_lines[node.line_nr] = True
+        try:
+            builder = self.builders[-1]
+        except:
+            return
+        # get line from input file
+        line = self.input_file_lines[node.line_nr - 1].strip()
+        builder.comment(f"Line {node.line_nr}: {line}")
 
     def store_value(self, value: TreeNode, llvm_var: ir.Value) -> None:
         """
@@ -102,6 +127,10 @@ class LlvmConverter:
                         bytearray(value.value.encode("utf-8")),
                     ),
                     llvm_var,
+                )
+            case CharNode():
+                builder.store(
+                    ir.Constant(ir.IntType(8), ord(value.value[1:-1])), llvm_var
                 )
             case IdNode():
                 builder.store(
@@ -311,6 +340,8 @@ class LlvmConverter:
             case NotNode():
                 child = self.node_to_llvm(node.children[0])
                 return builder.not_(child)
+            case CharNode():
+                return ir.Constant(ir.IntType(8), ord(node.value[1:-1]))
             case _:
                 raise Exception(f"Unknown type: {node}")
 
@@ -404,13 +435,36 @@ class LlvmConverter:
                 self.store_value(value, assignee)
 
             case NewVariableNode():
-                builder = self.builders[-1]
-
                 const_var: bool = len(node.children) == 4
-
                 var_name = (
                     node.children[2].value if const_var else node.children[1].value
                 )
+
+                try:
+                    builder = self.builders[-1]
+                except:
+                    # global variable
+                    var = ir.GlobalVariable(
+                        self.module,
+                        node_to_llvmtype(node.children[2], self.symbol_table),
+                        var_name,
+                    )
+                    value_ast = node.children[3] if const_var else node.children[2]
+                    match value_ast:
+                        case IntNode():
+                            value = ir.Constant(ir.IntType(32), int(value_ast.value))
+                        case FloatNode():
+                            value = ir.Constant(ir.FloatType(), float(value_ast.value))
+                        case CharNode():
+                            value = ir.Constant(
+                                ir.ArrayType(ir.IntType(8), 1),
+                                bytearray(value_ast.value.encode("utf-8")),
+                            )
+                        case _:
+                            raise Exception("Converter.py:433")
+                    var.initializer = value
+                    return
+
                 symbol_table_entry = self.symbol_table.find_entry(var_name)
 
                 var_type = node_to_llvmtype(node.children[2], self.symbol_table)
@@ -420,6 +474,50 @@ class LlvmConverter:
                 value = node.children[3] if const_var else node.children[2]
 
                 self.store_value(value, var)
+
+            case PrintfNode():
+                builder = self.builders[-1]
+                printf_str = node.children[0].value[1:-1]
+                printf_str = printf_str.replace("\\n", "\x0A")
+                printf_str += "\00"
+
+                fmt_str = ir.GlobalVariable(
+                    self.module,
+                    ir.ArrayType(ir.IntType(8), len(printf_str)),
+                    name=f".str{id(node)}",
+                )
+
+                fmt_str.initializer = ir.Constant(
+                    ir.ArrayType(ir.IntType(8), len(printf_str)),
+                    bytearray(printf_str.encode("utf-8")),
+                )
+
+                fmt_str_pointer = builder.bitcast(
+                    fmt_str, ir.PointerType(ir.IntType(8), 0), name="fmt_str"
+                )
+
+                vars = [child for child in node.children[1:]]
+                llvm_vars = []
+                for var in vars:
+                    llvm_vars.append(self.node_to_llvm(var))
+
+                args = [fmt_str_pointer] + llvm_vars
+
+                builder.call(
+                    self.module.get_global("printf"),
+                    args,
+                )
+
+            case CommentNode():
+                comment_value = node.value[2:]
+                # split comment into multiple lines
+                comment_lines = comment_value.split("\n")
+
+                builder = self.builders[-1]
+                for comment_line in comment_lines:
+                    if comment_line.strip() == "*/" or comment_line == "":
+                        continue
+                    builder.comment(comment_line)
 
             case ReturnNode():
                 builder = self.builders[-1]
@@ -462,6 +560,7 @@ class LlvmConverter:
                         raise Exception(
                             f"Unknown type at Generation of return: {node.children[0]}"
                         )
+        self.add_statement_comment(node)
 
         for child in node.children:
             self.convert(child)

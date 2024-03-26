@@ -18,13 +18,13 @@ class SymbolTableEntry:
         type: SymbolTableEntryType,
         const: bool = False,
         declaration_line: int = -1,
-        llvm_var=None,
+        llvm_var: ir.Value = None,
     ) -> None:
         self.name: str = name
         self.type: SymbolTableEntryType = type
         self.const: bool = const
-        self.declaration_line = declaration_line
-        self.llvm_var = llvm_var
+        self.declaration_line: int = declaration_line
+        self.llvm_var: ir.Value = llvm_var
 
 
 class Table:
@@ -36,7 +36,9 @@ class Table:
     def __repr__(self) -> str:
         string: str = ""
         for entry in self.table:
-            string += f"id: {entry.name}, type: {entry.type.name}, constant: {entry.const}\n"
+            string += (
+                f"id: {entry.name}, type: {entry.type.name}, constant: {entry.const}\n"
+            )
         return string
 
     def add_entry(self, entry: SymbolTableEntry):
@@ -62,6 +64,8 @@ def node_to_symbolTableEntryType(
         return SymbolTableEntryType.Float
     if isinstance(node, StringNode):
         return SymbolTableEntryType.String
+    if isinstance(node, CharNode):
+        return SymbolTableEntryType.Char
     if isinstance(node, (PlusNode, MultNode, DivNode, MinusNode)):
         return node_to_symbolTableEntryType(node.children[0], symbol_table)
     if isinstance(node, IdNode):
@@ -128,7 +132,8 @@ class SymbolTable:
                     SymbolTableEntry(
                         tree.children[2].value,
                         node_to_symbolTableEntryType(tree.children[3], self),
-                        True, tree.children[2].line_nr
+                        True,
+                        tree.children[2].line_nr,
                     )
                 )
             else:
@@ -136,7 +141,8 @@ class SymbolTable:
                     SymbolTableEntry(
                         tree.children[1].value,
                         node_to_symbolTableEntryType(tree.children[2], self),
-                        False, tree.children[2].line_nr
+                        False,
+                        tree.children[2].line_nr,
                     )
                 )
         for child in tree.children:
