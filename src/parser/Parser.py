@@ -60,15 +60,68 @@ class Parser:
                     child,
                     (
                         ProgNode,
-                        PointerNode,
                         AddressNode,
                         ReturnNode,
                         NotNode,
+                        IntPointerNode,
+                        FloatPointerNode,
+                        CharPointerNode,
+                        BoolPointerNode,
                         PrintfNode,
                     ),
                 ):
                     idx = cst.children.index(child)
                     cst.children[idx] = new_child
+
+        # Implicit conversions
+        if isinstance(cst, NewVariableNode):
+            type_node = cst.children[0]
+            value_node = cst.children[2]
+            constant = False
+            if isinstance(type_node, ConstNode):
+                constant = True
+                type_node = cst.children[1]
+                value_node = cst.children[3]
+            if type_node.value == "int" and isinstance(value_node, FloatNode):
+                print(
+                    f"Warning: Conversion from type float to int on line {type_node.line_nr} may cause loss of information."
+                )
+                new_node = IntNode(
+                    str(int(float(value_node.value))),
+                    value_node.children,
+                    value_node.line_nr,
+                )
+                if constant:
+                    cst.children[3] = new_node
+                else:
+                    cst.children[2] = new_node
+            if type_node.value == "char":
+                if isinstance(value_node, FloatNode):
+                    print(
+                        f"Warning: Conversion from type float to char on line {type_node.line_nr} may cause loss of information."
+                    )
+                    new_node = CharNode(
+                        str(chr(int(float(value_node.value)))),
+                        value_node.children,
+                        value_node.line_nr,
+                    )
+                    if constant:
+                        cst.children[3] = new_node
+                    else:
+                        cst.children[2] = new_node
+                elif isinstance(value_node, IntNode):
+                    print(
+                        f"Warning: Conversion from type int to char on line {type_node.line_nr} may cause loss of information."
+                    )
+                    new_node = CharNode(
+                        str(chr(int(value_node.value))),
+                        value_node.children,
+                        value_node.line_nr,
+                    )
+                    if constant:
+                        cst.children[3] = new_node
+                    else:
+                        cst.children[2] = new_node
 
         return cst
 
@@ -140,16 +193,6 @@ class Parser:
                 )
                 idx = cst.children.index(child)
                 cst.children[idx] = new_child
-        if len(cst.children) > 0:
-            for child in cst.children:
-                if len(child.children) == 1:
-                    new_child = child.children[0]
-                    if not isinstance(
-                        child,
-                        (StatNode, ProgNode, MainNode, ReturnNode, NotNode, PrintfNode),
-                    ):
-                        idx = cst.children.index(child)
-                        cst.children[idx] = new_child
 
         return cst
 
@@ -327,6 +370,36 @@ class ASTVisitor(CVisitor):
             if cstChild is None:
                 continue
             children.append(cstChild)
+
+        type_node = children[0]
+        pointer_node = children[1]
+        pointer_idx = 1
+        if isinstance(children[0], ConstNode):
+            type_node = children[1]
+            pointer_node = children[2]
+            pointer_idx = 2
+        if isinstance(pointer_node, PointerNode):
+            match type_node.value:
+                case "int":
+                    children[pointer_idx] = IntPointerNode(
+                        pointer_node.depth, pointer_node.children, pointer_node.line_nr
+                    )
+                    type_node.value = "int*"
+                case "float":
+                    children[pointer_idx] = FloatPointerNode(
+                        pointer_node.depth, pointer_node.children, pointer_node.line_nr
+                    )
+                    type_node.value = "float*"
+                case "char":
+                    children[pointer_idx] = CharPointerNode(
+                        pointer_node.depth, pointer_node.children, pointer_node.line_nr
+                    )
+                    type_node.value = "char*"
+                case "bool":
+                    children[pointer_idx] = BoolPointerNode(
+                        pointer_node.depth, pointer_node.children, pointer_node.line_nr
+                    )
+                    type_node.value = "bool*"
 
         return NewVariableNode(line_nr=ctx.start.line, children=children)
 

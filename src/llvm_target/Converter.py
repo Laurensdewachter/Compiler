@@ -248,6 +248,7 @@ class LlvmConverter:
     def node_to_llvm(self, node: TreeNode) -> ir.Value:
         """
         Convert a TreeNode to a llvmlite ir.Value
+        The value is also immediately saved in the llvm code
         :param node: Treenode to convert
         :return: ir.Value : The converted node
         """
