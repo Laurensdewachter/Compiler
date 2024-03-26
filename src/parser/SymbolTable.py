@@ -94,6 +94,8 @@ def node_to_symbolTableEntryType(
         return SymbolTableEntryType.Char
     if isinstance(node, BoolNode):
         return SymbolTableEntryType.Bool
+    if isinstance(node, AddressNode):
+        return node_to_symbolTableEntryType(node.children[0], symbol_table)
 
     raise ValueError(f"Invalid node type: {node.__class__.__name__}")
 
@@ -125,26 +127,34 @@ class SymbolTable:
             self.current_idx = len(self.tables) - 1
 
         if isinstance(tree, NewVariableNode):
-            if self.find_entry_in_current_scope(tree.children[0].value):
-                raise ValueError(f"error: redefinition of '{tree.children[0].value}'")
-            if isinstance(tree.children[0], ConstNode):
-                self.tables[self.current_idx].add_entry(
-                    SymbolTableEntry(
-                        tree.children[2].value,
-                        node_to_symbolTableEntryType(tree.children[3], self),
-                        True,
-                        tree.children[2].line_nr,
-                    )
+            # Check for constant
+            type_node_idx = 0
+            if len(tree.children) == 4:
+                type_node_idx = 1
+
+            # Check for pointer
+            id_node = tree.children[type_node_idx + 1]
+            if isinstance(
+                tree.children[type_node_idx + 1],
+                (IntPointerNode, FloatPointerNode, CharPointerNode, BoolPointerNode),
+            ):
+                id_node = id_node.children[0]
+
+            # Check for existing entry
+            if self.find_entry_in_current_scope(id_node.value):
+                raise ValueError(f"error: redefinition of '{id_node.value}'")
+            # Create new entry
+            self.tables[self.current_idx].add_entry(
+                SymbolTableEntry(
+                    id_node.value,
+                    node_to_symbolTableEntryType(
+                        tree.children[type_node_idx + 2], self
+                    ),
+                    len(tree.children) == 4,
+                    id_node.line_nr,
                 )
-            else:
-                self.tables[self.current_idx].add_entry(
-                    SymbolTableEntry(
-                        tree.children[1].value,
-                        node_to_symbolTableEntryType(tree.children[2], self),
-                        False,
-                        tree.children[2].line_nr,
-                    )
-                )
+            )
+
         for child in tree.children:
             self.build_symbol_table(child)
 
