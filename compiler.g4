@@ -31,8 +31,8 @@ expr:
 	| address
 	| variable
 	| LPAREN expr RPAREN
-	| ('++' | '--') expr
-	| expr ('++' | '--')
+	| unaryminusminus
+	| unaryplusplus
 	| expr '&&' expr
 	| expr LSHIFT expr
 	| expr RSHIFT expr
@@ -40,6 +40,13 @@ expr:
 	| expr BITOR expr
 	| expr BITXOR expr
 	| expr BITNOT expr;
+
+
+unaryplusplus: PLUSPLUS variable
+    | variable PLUSPLUS;
+
+unaryminusminus: MINUSMINUS variable
+    | variable MINUSMINUS;
 
 variable: ID;
 
@@ -82,6 +89,8 @@ RBRACKET: '}';
 LPAREN: '(';
 RPAREN: ')';
 POINTER: '*';
+PLUSPLUS: '++';
+MINUSMINUS: '--';
 CONST: 'const';
 SQUOTE: ['];
 DQUOTE: ["];
