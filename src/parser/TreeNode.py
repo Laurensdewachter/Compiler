@@ -65,6 +65,11 @@ class PlusNode(TreeNode):
         super().__init__("+", children=children, line_nr=line_nr)
 
 
+class UnaryPlusNode(TreeNode):
+    def __init__(self, children=None, line_nr: int = -1) -> None:
+        super().__init__("UnaryPlus", children=children, line_nr=line_nr)
+
+
 class GtNode(TreeNode):
     def __init__(self, children=None, line_nr: int = -1) -> None:
         super().__init__(">", children=children, line_nr=line_nr)
@@ -148,6 +153,11 @@ class BitNotNode(TreeNode):
 class MinusNode(TreeNode):
     def __init__(self, children=None, line_nr: int = -1) -> None:
         super().__init__("-", children=children, line_nr=line_nr)
+
+
+class UnaryMinusNode(TreeNode):
+    def __init__(self, children=None, line_nr: int = -1) -> None:
+        super().__init__("UnaryMinus", children=children, line_nr=line_nr)
 
 
 class MultNode(TreeNode):

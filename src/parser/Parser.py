@@ -1,3 +1,5 @@
+import copy
+
 from antlr4 import *
 from src.parser.TreeNode import *
 from antlr4.error.ErrorListener import ErrorListener, ConsoleErrorListener
@@ -363,6 +365,40 @@ class ASTVisitor(CVisitor):
 
         return VariableNode(line_nr=ctx.start.line, children=children)
 
+    def visitUnaryplusplus(self, ctx: CParser.UnaryplusplusContext) -> AssignNode:
+        if ctx.children[0].getText() == "++":
+            var = self.visit(ctx.children[1])
+        else:
+            var = self.visit(ctx.children[0])
+
+        return AssignNode(
+            line_nr=ctx.start.line,
+            children=[
+                var,
+                PlusNode(
+                    [copy.deepcopy(var), IntNode("1", line_nr=ctx.start.line)],
+                    line_nr=ctx.start.line,
+                ),
+            ],
+        )
+
+    def visitUnaryminusminus(self, ctx: CParser.UnaryminusminusContext) -> AssignNode:
+        if ctx.children[0].getText() == "--":
+            var = self.visit(ctx.children[1])
+        else:
+            var = self.visit(ctx.children[0])
+
+        return AssignNode(
+            line_nr=ctx.start.line,
+            children=[
+                var,
+                MinusNode(
+                    [copy.deepcopy(var), IntNode("1", line_nr=ctx.start.line)],
+                    line_nr=ctx.start.line,
+                ),
+            ],
+        )
+
     def visitNewVariable(self, ctx: CParser.NewVariableContext) -> NewVariableNode:
         children = []
         for child in ctx.children:
@@ -524,3 +560,7 @@ class ASTVisitor(CVisitor):
                 return CommentNode(text, line_nr=node.symbol.line)
             case CParser.COMMENT:
                 return CommentNode(text, line_nr=node.symbol.line)
+            case CParser.PLUSPLUS:
+                return UnaryPlusNode(text, line_nr=node.symbol.line)
+            case CParser.MINUSMINUS:
+                return UnaryMinusNode(text, line_nr=node.symbol.line)
