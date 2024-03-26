@@ -26,6 +26,22 @@ def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
             return node_to_llvmtype(node.children[0], symbol_table)
         case MinusNode():
             return node_to_llvmtype(node.children[0], symbol_table)
+        case AddressNode():
+            child = node.children[0]
+            symbol_table_type = symbol_table.find_entry(child.value).type
+            match symbol_table_type:
+                case SymbolTableEntryType.Int:
+                    return ir.IntType(32).as_pointer()
+                case SymbolTableEntryType.Float:
+                    return ir.FloatType().as_pointer()
+                case SymbolTableEntryType.String:
+                    return ir.ArrayType(ir.IntType(8), 0).as_pointer()
+                case SymbolTableEntryType.Bool:
+                    return ir.IntType(1).as_pointer()
+                case SymbolTableEntryType.Char:
+                    return ir.IntType(8).as_pointer()
+                case _:
+                    raise Exception(f"Unknown type: {symbol_table_type}")
         case LShiftNode():
             return ir.IntType(32)
         case RShiftNode():
@@ -137,6 +153,10 @@ class LlvmConverter:
                     builder.load(self.symbol_table.find_entry(value.value).llvm_var),
                     llvm_var,
                 )
+            case AddressNode():
+                child = value.children[0]
+                symbol_table_entry = self.symbol_table.find_entry(child.value)
+                builder.store(symbol_table_entry.llvm_var, llvm_var)
             case PlusNode():
                 builder.store(self.addition(value), llvm_var)
             case MultNode():
@@ -430,16 +450,48 @@ class LlvmConverter:
                 self.builders.append(ir.IRBuilder(self.blocks[-1]))
 
             case AssignNode():
-                assignee = self.symbol_table.find_entry(node.children[0].value).llvm_var
+                if isinstance(node.children[0], PointerNode):
+                    # dereference pointer
+                    pointee = self.symbol_table.find_entry(
+                        node.children[0].children[0].value
+                    ).llvm_var
+                    assignee = self.builders[-1].load(pointee)
+                else:
+                    assignee = self.symbol_table.find_entry(
+                        node.children[0].value
+                    ).llvm_var
                 value = node.children[1]
 
                 self.store_value(value, assignee)
 
             case NewVariableNode():
                 const_var: bool = len(node.children) == 4
-                var_name = (
-                    node.children[2].value if const_var else node.children[1].value
-                )
+                if const_var:
+                    if isinstance(
+                        node.children[2],
+                        (
+                            IntPointerNode,
+                            FloatPointerNode,
+                            CharPointerNode,
+                            BoolPointerNode,
+                        ),
+                    ):
+                        var_name = node.children[2].children[0].value
+                    else:
+                        var_name = node.children[2].value
+                else:
+                    if isinstance(
+                        node.children[1],
+                        (
+                            IntPointerNode,
+                            FloatPointerNode,
+                            CharPointerNode,
+                            BoolPointerNode,
+                        ),
+                    ):
+                        var_name = node.children[1].children[0].value
+                    else:
+                        var_name = node.children[1].value
 
                 try:
                     builder = self.builders[-1]
