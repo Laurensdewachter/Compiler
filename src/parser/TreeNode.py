@@ -185,11 +185,6 @@ class IdNode(TreeNode):
         super().__init__(value, children=children, line_nr=line_nr)
 
 
-class PointerNode(TreeNode):
-    def __init__(self, depth: int, children=None, line_nr: int = -1) -> None:
-        super().__init__(str(depth), children=children, line_nr=line_nr)
-
-
 class AddressNode(TreeNode):
     def __init__(self, children=None, line_nr: int = -1) -> None:
         super().__init__("Address", children=children, line_nr=line_nr)
@@ -218,3 +213,33 @@ class TypeNode(TreeNode):
 class BoolNode(TreeNode):
     def __init__(self, value: str, children=None, line_nr: int = -1) -> None:
         super().__init__(value, children=children, line_nr=line_nr)
+
+
+class PointerNode(TreeNode):
+    def __init__(self, depth: int, children=None, line_nr: int = -1) -> None:
+        self.depth = depth
+        super().__init__("Int pointer", children=children, line_nr=line_nr)
+
+
+class IntPointerNode(TreeNode):
+    def __init__(self, depth: int, children=None, line_nr: int = -1) -> None:
+        self.depth = depth
+        super().__init__("Int pointer", children=children, line_nr=line_nr)
+
+
+class FloatPointerNode(TreeNode):
+    def __init__(self, depth: int, children=None, line_nr: int = -1) -> None:
+        self.depth = depth
+        super().__init__("Float pointer", children=children, line_nr=line_nr)
+
+
+class CharPointerNode(TreeNode):
+    def __init__(self, depth: int, children=None, line_nr: int = -1) -> None:
+        self.depth = depth
+        super().__init__("Char pointer", children=children, line_nr=line_nr)
+
+
+class BoolPointerNode(TreeNode):
+    def __init__(self, depth: int, children=None, line_nr: int = -1) -> None:
+        self.depth = depth
+        super().__init__("Bool pointer", children=children, line_nr=line_nr)
