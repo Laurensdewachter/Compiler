@@ -93,12 +93,12 @@ class Parser:
             ):
                 continue
             new_child = None
-            if isinstance(child, PlusNode):
+            if isinstance(child, PlusNode) and len(child.children) == 2:
                 new_child = IntNode(
                     str(int(child.children[0].value) + int(child.children[1].value)),
                     line_nr=child.line_nr,
                 )
-            elif isinstance(child, MinusNode):
+            elif isinstance(child, MinusNode) and len(child.children) == 2:
                 new_child = IntNode(
                     str(int(child.children[0].value) - int(child.children[1].value)),
                     line_nr=child.line_nr,
@@ -303,7 +303,7 @@ class Parser:
                     ast.children[-1] = new_node
                     changed = True
 
-            if not isinstance(ast, (NewVariableNode, AssignNode)):
+            if not isinstance(ast, (NewVariableNode, AssignNode, AddressNode)):
                 for child in ast.children:
                     if (
                         isinstance(child, IdNode)
@@ -496,6 +496,16 @@ class ASTVisitor(CVisitor):
                 return ReturnNode(line_nr=ctx.start.line, children=[children[1]])
             if isinstance(children[0], NotNode):
                 return NotNode(line_nr=ctx.start.line, children=[children[1]])
+            if isinstance(children[0], PlusNode):
+                return children[1]
+            if isinstance(children[0], MinusNode) and children[0].children == []:
+                try:
+                    if isinstance(children[1].children[0].children[0], IntNode):
+                        return IntNode("-" + children[1].children[0].children[0].value, line_nr=children[1].line_nr)
+                    if isinstance(children[1].children[0].children[0], FloatNode):
+                        return FloatNode("-" + children[1].children[0].children[0].value, line_nr=children[1].line_nr)
+                except:
+                    pass
 
         return ExprNode(line_nr=ctx.start.line, children=children)
 
