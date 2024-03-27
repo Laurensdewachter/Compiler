@@ -159,7 +159,7 @@ class LlvmConverter:
         match value:
             case IntNode():
                 pointer_depth = llvm_var.type.intrinsic_name.count("p0")
-                if pointer_depth >= 1:
+                if pointer_depth <= 1:
                     builder.store(
                         ir.Constant(ir.IntType(32), int(value.value)), llvm_var
                     )
@@ -665,7 +665,13 @@ class LlvmConverter:
                 value = node.children[3] if const_var else node.children[2]
 
                 # check if value is a pointer
-                self.store_value(value, var, depth=pointer_depth)
+                try:
+                    self.store_value(value, var, depth=pointer_depth)
+                except:
+                    # and with integers
+                    var = builder.alloca(ir.IntType(32), name=var_name)
+                    symbol_table_entry.llvm_var = var
+                    self.store_value(value, var, depth=pointer_depth)
 
             case PrintfNode():
                 builder = self.builders[-1]

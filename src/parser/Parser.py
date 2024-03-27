@@ -221,6 +221,10 @@ operator_signs = {
 
 
 class ASTVisitor(CVisitor):
+
+    def __init__(self) -> None:
+        self.typedefs = {}
+
     def visitProg(self, ctx: CParser.ProgContext):
         children = []
         for child in ctx.children:
@@ -230,6 +234,11 @@ class ASTVisitor(CVisitor):
             children.append(cstChild)
 
         return ProgNode(line_nr=ctx.start.line, children=children)
+
+    def visitTypedef(self, ctx: compilerParser.TypedefContext):
+        c_type = ctx.children[1].getText()
+        new_type = ctx.children[2].getText()
+        self.typedefs[new_type] = c_type
 
     def visitMain(self, ctx: compilerParser.MainContext):
         children = []
@@ -415,6 +424,12 @@ class ASTVisitor(CVisitor):
             type_node = children[1]
             pointer_node = children[2]
             pointer_idx = 2
+        if self.typedefs.get(type_node.value):
+            type = self.typedefs.get(type_node.value)
+            if isinstance(children[0], ConstNode):
+                children[1] = TypeNode(type, line_nr=type_node.line_nr)
+            else:
+                children[0] = TypeNode(type, line_nr=type_node.line_nr)
         if isinstance(pointer_node, PointerNode):
             match type_node.value:
                 case "int":
