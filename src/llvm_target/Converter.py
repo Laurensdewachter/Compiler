@@ -42,6 +42,9 @@ def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
                     return ir.IntType(8).as_pointer()
                 case _:
                     raise Exception(f"Unknown type: {symbol_table_type}")
+        case PointerNode():
+            # dereference!
+            return node_to_llvmtype(node.children[0], symbol_table)
         case LShiftNode():
             return ir.IntType(32)
         case RShiftNode():
@@ -145,6 +148,9 @@ class LlvmConverter:
                     llvm_var,
                 )
             case CharNode():
+                if len(value.value) == 4:
+                    # escape character e.g. '\\n'
+                    value.value = value.value.encode("utf-8").decode("unicode_escape")
                 builder.store(
                     ir.Constant(ir.IntType(8), ord(value.value[1:-1])), llvm_var
                 )
@@ -262,6 +268,13 @@ class LlvmConverter:
             case NotNode():
                 child = self.node_to_llvm(value.children[0])
                 builder.store(builder.not_(child), llvm_var)
+            case PointerNode():
+                # dereference
+                pointer_loc = self.symbol_table.find_entry(
+                    value.children[0].value
+                ).llvm_var
+                pointee = builder.load(pointer_loc)
+                builder.store(builder.load(pointee), llvm_var)
             case _:
                 raise Exception(f"Unknown type at Generation of assignment: {value}")
 
@@ -280,6 +293,13 @@ class LlvmConverter:
                 return ir.Constant(ir.FloatType(), float(node.value))
             case IdNode():
                 return builder.load(self.symbol_table.find_entry(node.value).llvm_var)
+            case PointerNode():
+                # dereference
+                pointer_loc = self.symbol_table.find_entry(
+                    node.children[0].value
+                ).llvm_var
+                pointee = builder.load(pointer_loc)
+                return builder.load(pointee)
             case PlusNode():
                 return self.addition(node)
             case MultNode():
