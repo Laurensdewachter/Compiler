@@ -83,66 +83,143 @@ class Parser:
 
         for child in ast.children:
             if (
-                isinstance(child, PlusNode)
-                and isinstance(child.children[0], IntNode)
-                and isinstance(child.children[1], IntNode)
+                child.children is not None
+                and len(child.children) >= 2
+                and (
+                    not isinstance(child.children[0], IntNode)
+                    or not isinstance(child.children[1], IntNode)
+                )
             ):
+                continue
+            new_child = None
+            if isinstance(child, PlusNode):
                 new_child = IntNode(
                     str(int(child.children[0].value) + int(child.children[1].value)),
                     line_nr=child.line_nr,
                 )
-                idx = ast.children.index(child)
-                ast.children[idx] = new_child
-                changed = True
-
-            elif (
-                isinstance(child, MinusNode)
-                and isinstance(child.children[0], IntNode)
-                and isinstance(child.children[1], IntNode)
-            ):
+            elif isinstance(child, MinusNode):
                 new_child = IntNode(
                     str(int(child.children[0].value) - int(child.children[1].value)),
                     line_nr=child.line_nr,
                 )
-                idx = ast.children.index(child)
-                ast.children[idx] = new_child
-                changed = True
-
-            elif (
-                isinstance(child, MultNode)
-                and isinstance(child.children[0], IntNode)
-                and isinstance(child.children[1], IntNode)
-            ):
+            elif isinstance(child, MultNode):
                 new_child = IntNode(
                     str(int(child.children[0].value) * int(child.children[1].value)),
                     line_nr=child.line_nr,
                 )
-                idx = ast.children.index(child)
-                ast.children[idx] = new_child
-                changed = True
-
-            elif (
-                isinstance(child, DivNode)
-                and isinstance(child.children[0], IntNode)
-                and isinstance(child.children[1], IntNode)
-            ):
+            elif isinstance(child, DivNode):
                 new_child = IntNode(
                     str(int(child.children[0].value) // int(child.children[1].value)),
                     line_nr=child.line_nr,
                 )
-                idx = ast.children.index(child)
-                ast.children[idx] = new_child
-                changed = True
-
-            elif (
-                isinstance(child, ModNode)
-                and isinstance(child.children[0], IntNode)
-                and isinstance(child.children[1], IntNode)
-            ):
+            elif isinstance(child, ModNode):
                 new_child = IntNode(
                     str(int(child.children[0].value) % int(child.children[1].value)),
                     line_nr=child.line_nr,
                 )
+            elif isinstance(child, OrNode):
+                new_child = IntNode(
+                    str(int(child.children[0].value) or int(child.children[1].value)),
+                    line_nr=child.line_nr,
+                )
+            elif isinstance(child, AndNode):
+                new_child = IntNode(
+                    str(int(child.children[0].value) and int(child.children[1].value)),
+                    line_nr=child.line_nr,
+                )
+            elif isinstance(child, NotNode):
+                new_child = IntNode(
+                    str(int(not int(child.children[0].value))),
+                    line_nr=child.line_nr,
+                )
+            elif isinstance(child, GtNode):
+                new_child = IntNode(
+                    str(
+                        int(int(child.children[0].value) > int(child.children[1].value))
+                    ),
+                    line_nr=child.line_nr,
+                )
+            elif isinstance(child, LtNode):
+                new_child = IntNode(
+                    str(
+                        int(int(child.children[0].value) < int(child.children[1].value))
+                    ),
+                    line_nr=child.line_nr,
+                )
+            elif isinstance(child, GeqNode):
+                new_child = IntNode(
+                    str(
+                        int(int(child.children[0].value) <= int(child.children[1].value))
+                    ),
+                    line_nr=child.line_nr,
+                )
+            elif isinstance(child, LeqNode):
+                new_child = IntNode(
+                    str(
+                        int(int(child.children[0].value) <= int(child.children[1].value))
+                    ),
+                    line_nr=child.line_nr,
+                )
+            elif isinstance(child, NeqNode):
+                new_child = IntNode(
+                    str(
+                        int(int(child.children[0].value) != int(child.children[1].value))
+                    ),
+                    line_nr=child.line_nr,
+                )
+            elif isinstance(child, LShiftNode):
+                if int(child.children[1].value) >= 0:
+                    new_child = IntNode(
+                        str(
+                            int(int(child.children[0].value) << int(child.children[1].value))
+                        ),
+                        line_nr=child.line_nr,
+                    )
+                else:
+                    new_child = IntNode(
+                        str(
+                            int(int(child.children[0].value) >> -int(child.children[1].value))
+                        ),
+                        line_nr=child.line_nr,
+                    )
+            elif isinstance(child, RShiftNode):
+                if int(child.children[1].value) >= 0:
+                    new_child = IntNode(
+                        str(
+                            int(int(child.children[0].value) >> int(child.children[1].value))
+                        ),
+                        line_nr=child.line_nr,
+                    )
+                else:
+                    new_child = IntNode(
+                        str(
+                            int(int(child.children[0].value) << -int(child.children[1].value))
+                        ),
+                        line_nr=child.line_nr,
+                    )
+            elif isinstance(child, BitXorNode):
+                new_child = IntNode(
+                    str(
+                        int(int(child.children[0].value) ^ int(child.children[1].value))
+                    ),
+                    line_nr=child.line_nr,
+                )
+            elif isinstance(child, BitAndNode):
+                new_child = IntNode(
+                    str(
+                        int(int(child.children[0].value) & int(child.children[1].value))
+                    ),
+                    line_nr=child.line_nr,
+                )
+            elif isinstance(child, BitOrNode):
+                new_child = IntNode(
+                    str(
+                        int(int(child.children[0].value) & int(child.children[1].value))
+                    ),
+                    line_nr=child.line_nr,
+                )
+
+            if new_child is not None:
                 idx = ast.children.index(child)
                 ast.children[idx] = new_child
                 changed = True
