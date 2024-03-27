@@ -2,6 +2,7 @@ import copy
 
 from antlr4 import *
 from src.parser.TreeNode import *
+from src.parser.SymbolTable import *
 from antlr4.error.ErrorListener import ErrorListener, ConsoleErrorListener
 from src.antlr_files.compilerLexer import compilerLexer as CLexer
 from src.antlr_files.compilerParser import compilerParser as CParser, compilerParser
@@ -26,7 +27,7 @@ class Parser:
     """
 
     @staticmethod
-    def parse(input_file: str, no_const_fold: bool, no_const_prop: bool) -> TreeNode:
+    def parse(input_file: str) -> TreeNode:
         error_listener = MyErrorListener()
         lexer = CLexer(FileStream(input_file))
         lexer.removeErrorListener(ConsoleErrorListener.INSTANCE)
@@ -39,12 +40,7 @@ class Parser:
 
         tree: CParser.ProgContext = parser.prog()
 
-        ast = Parser.convert_to_ast(ASTVisitor().visit(tree))
-        if not no_const_prop:
-            pass  # TODO: implement constant propagation
-        if not no_const_fold:
-            ast = Parser.const_folding(ast)
-        return ast
+        return Parser.convert_to_ast(ASTVisitor().visit(tree))
 
     @staticmethod
     def convert_to_ast(cst: TreeNode) -> TreeNode | None:
@@ -78,14 +74,14 @@ class Parser:
         return cst
 
     @staticmethod
-    def const_folding(cst: TreeNode) -> TreeNode | None:
-        if not cst.children:
+    def const_folding(ast: TreeNode, changed=False) -> bool | None:
+        if not ast.children:
             return
 
-        for child in cst.children:
-            Parser.const_folding(child)
+        for child in ast.children:
+            Parser.const_folding(child, changed)
 
-        for child in cst.children:
+        for child in ast.children:
             if (
                 isinstance(child, PlusNode)
                 and isinstance(child.children[0], IntNode)
@@ -95,8 +91,9 @@ class Parser:
                     str(int(child.children[0].value) + int(child.children[1].value)),
                     line_nr=child.line_nr,
                 )
-                idx = cst.children.index(child)
-                cst.children[idx] = new_child
+                idx = ast.children.index(child)
+                ast.children[idx] = new_child
+                changed = True
 
             elif (
                 isinstance(child, MinusNode)
@@ -107,8 +104,9 @@ class Parser:
                     str(int(child.children[0].value) - int(child.children[1].value)),
                     line_nr=child.line_nr,
                 )
-                idx = cst.children.index(child)
-                cst.children[idx] = new_child
+                idx = ast.children.index(child)
+                ast.children[idx] = new_child
+                changed = True
 
             elif (
                 isinstance(child, MultNode)
@@ -119,8 +117,9 @@ class Parser:
                     str(int(child.children[0].value) * int(child.children[1].value)),
                     line_nr=child.line_nr,
                 )
-                idx = cst.children.index(child)
-                cst.children[idx] = new_child
+                idx = ast.children.index(child)
+                ast.children[idx] = new_child
+                changed = True
 
             elif (
                 isinstance(child, DivNode)
@@ -131,8 +130,9 @@ class Parser:
                     str(int(child.children[0].value) // int(child.children[1].value)),
                     line_nr=child.line_nr,
                 )
-                idx = cst.children.index(child)
-                cst.children[idx] = new_child
+                idx = ast.children.index(child)
+                ast.children[idx] = new_child
+                changed = True
 
             elif (
                 isinstance(child, ModNode)
@@ -143,10 +143,93 @@ class Parser:
                     str(int(child.children[0].value) % int(child.children[1].value)),
                     line_nr=child.line_nr,
                 )
-                idx = cst.children.index(child)
-                cst.children[idx] = new_child
+                idx = ast.children.index(child)
+                ast.children[idx] = new_child
+                changed = True
 
-        return cst
+        return changed
+
+    @staticmethod
+    def const_prop(
+        ast: TreeNode,
+        symbol_table: SymbolTable,
+    ) -> bool | None:
+        class ValueEntry:
+            def __init__(self, id: str, value: str):
+                self.id: str = id
+                self.value: str = value
+
+        const_values: [ValueEntry] = []
+
+        def get_const_value(id: str) -> str | None:
+            for entry in const_values:
+                if entry.id == id:
+                    return entry.value
+            return None
+
+        def const_prop_recur(ast: TreeNode, changed=False) -> bool | None:
+            if ast.children is None:
+                return
+
+            for child in ast.children:
+                const_prop_recur(child)
+
+            # Store new constant variables
+            if (
+                isinstance(ast, NewVariableNode)
+                and isinstance(ast.children[0], ConstNode)
+                and isinstance(
+                    ast.children[-1], (IntNode, FloatNode, CharNode, BoolNode)
+                )
+            ):
+                const_values.append(
+                    ValueEntry(ast.children[-2].value, ast.children[-1].value)
+                )
+
+            # Check if right id is constant at new assignments
+            if (
+                isinstance(ast, (NewVariableNode, AssignNode))
+                and isinstance(ast.children[-1], IdNode)
+                and symbol_table.find_entry(ast.children[-1].value).const
+            ):
+                const_value = get_const_value(ast.children[-1].value)
+                if const_value is not None:
+                    match symbol_table.find_entry(ast.children[-1].value).type:
+                        case SymbolTableEntryType.Int:
+                            new_node = IntNode(const_value)
+                        case SymbolTableEntryType.Float:
+                            new_node = FloatNode(const_value)
+                        case SymbolTableEntryType.Char:
+                            new_node = CharNode(const_value)
+                        case SymbolTableEntryType.Bool:
+                            new_node = BoolNode(const_value)
+                    new_node.line_nr = ast.line_nr
+                    ast.children[-1] = new_node
+                    changed = True
+
+            if not isinstance(ast, (NewVariableNode, AssignNode)):
+                for child in ast.children:
+                    if (
+                        isinstance(child, IdNode)
+                        and symbol_table.find_entry(child.value).const
+                    ):
+                        const_value = get_const_value(ast.children[-1].value)
+                        if const_value is not None:
+                            match symbol_table.find_entry(ast.children[-1].value).type:
+                                case SymbolTableEntryType.Int:
+                                    new_node = IntNode(const_value)
+                                case SymbolTableEntryType.Float:
+                                    new_node = FloatNode(const_value)
+                                case SymbolTableEntryType.Char:
+                                    new_node = CharNode(const_value)
+                                case SymbolTableEntryType.Bool:
+                                    new_node = BoolNode(const_value)
+                            new_node.line_nr = ast.line_nr
+                            ast.children[-1] = new_node
+                            changed = True
+            return changed
+
+        return const_prop_recur(ast)
 
 
 operator_signs = {

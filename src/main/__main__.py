@@ -1,4 +1,6 @@
 import argparse
+import copy
+
 from src.parser.Parser import Parser
 from src.parser.DotExporter import DotExporter
 from src.parser.SymbolTable import *
@@ -30,10 +32,20 @@ if __name__ == "__main__":
     no_const_propagation = args.no_const_propagation
 
     # Generate AST
-    ast: TreeNode = Parser.parse(input_file, no_const_folding, no_const_propagation)
+    ast: TreeNode = Parser.parse(input_file)
     # Generate symbol table
     symbol_table: SymbolTable = SymbolTable()
     symbol_table.build_symbol_table(ast)
+    # Constant folding and propagation
+    if not no_const_folding:
+        Parser.const_folding(ast)
+    if not no_const_propagation:
+        Parser.const_prop(ast, symbol_table)
+    if not no_const_folding and not no_const_propagation:
+        changed = True
+        while changed:
+            changed = Parser.const_folding(ast)
+            changed = Parser.const_prop(ast, symbol_table)
     # Analyze semantic
     semantic_errors, warnings = SemanticAnalyzer.analyze(ast, symbol_table)
     for error in semantic_errors:
