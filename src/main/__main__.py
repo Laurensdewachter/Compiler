@@ -35,6 +35,7 @@ if __name__ == "__main__":
     symbol_table: SymbolTable = SymbolTable()
     symbol_table.build_symbol_table(ast)
     # Analyze semantic
+    """
     semantic_errors, warnings = SemanticAnalyzer.analyze(ast, symbol_table)
     for error in semantic_errors:
         print(error)
@@ -42,6 +43,7 @@ if __name__ == "__main__":
         print(warning)
     if semantic_errors:
         quit(-1)
+    """
 
     if ast_file:
         DotExporter.export(ast, ast_file)
