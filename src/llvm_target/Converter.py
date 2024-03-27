@@ -118,9 +118,14 @@ class LlvmConverter:
         self.builders = []
 
         # Get the target triple using llvm-config
-        target_triple = (
-            subprocess.check_output(["llvm-config", "--host-target"]).decode().strip()
-        )
+        try:
+            target_triple = (
+                subprocess.check_output(["llvm-config", "--host-target"])
+                .decode()
+                .strip()
+            )
+        except:
+            target_triple = ""
         self.module = ir.Module("module")
         self.module.triple = target_triple
         self.input_file_lines = open(input_file_path).readlines()
