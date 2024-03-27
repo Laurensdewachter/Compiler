@@ -58,7 +58,7 @@ newVariable:
 	CONST* TYPE variable
 	| CONST* TYPE variable '=' expr
 	| CONST* TYPE pointer '=' address
-	| CONST* TYPE pointer '=' variable;
+	| CONST* TYPE pointer '=' expr;
 
 pointer: POINTER+ variable;
 

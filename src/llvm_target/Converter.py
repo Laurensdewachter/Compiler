@@ -231,7 +231,20 @@ class LlvmConverter:
             case NeqNode():
                 left = self.node_to_llvm(value.children[0])
                 right = self.node_to_llvm(value.children[1])
-                type = self.symbol_table.find_entry(value.children[0].value).type
+                try:
+                    type = self.symbol_table.find_entry(value.children[0].value).type
+                except:
+                    # address node
+                    address_to = self.symbol_table.find_entry(
+                        value.children[0].children[0].value
+                    )
+                    addres_to_llvm_var = address_to.llvm_var
+
+                    builder.store(
+                        builder.icmp_signed("!=", addres_to_llvm_var, right), llvm_var
+                    )
+                    return
+
                 if type == SymbolTableEntryType.Int:
                     builder.store(builder.icmp_signed("!=", left, right), llvm_var)
                 elif type == SymbolTableEntryType.Float:
@@ -426,6 +439,10 @@ class LlvmConverter:
                 return builder.not_(child)
             case CharNode():
                 return ir.Constant(ir.IntType(8), ord(node.value[1:-1]))
+            case AddressNode():
+                child = node.children[0]
+                symbol_table_entry = self.symbol_table.find_entry(child.value)
+                return symbol_table_entry.llvm_var
             case _:
                 raise Exception(f"Unknown type: {node}")
 
@@ -441,6 +458,10 @@ class LlvmConverter:
 
         left_llvm = self.node_to_llvm(left)
         right_llvm = self.node_to_llvm(right)
+
+        if left_llvm.type.intrinsic_name.count("p0") != 0:
+            var = builder.gep(left_llvm, [right_llvm])
+            return var
 
         var = builder.add(left_llvm, right_llvm)
 
@@ -491,6 +512,13 @@ class LlvmConverter:
         right = node.children[1]
 
         left_llvm = self.node_to_llvm(left)
+
+        # check for pointers
+        if left_llvm.type.intrinsic_name.count("p0") != 0:
+            right.value = str(-int(right.value))
+            right_llvm = self.node_to_llvm(right)
+            var = builder.gep(left_llvm, [right_llvm])
+            return var
         right_llvm = self.node_to_llvm(right)
 
         var = builder.sub(left_llvm, right_llvm)
