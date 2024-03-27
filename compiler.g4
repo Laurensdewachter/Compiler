@@ -57,7 +57,8 @@ main: TYPE 'main' LPAREN RPAREN LBRACKET stat* RBRACKET;
 newVariable:
 	CONST* TYPE variable
 	| CONST* TYPE variable '=' expr
-	| CONST* TYPE pointer '=' address;
+	| CONST* TYPE pointer '=' address
+	| CONST* TYPE pointer '=' variable;
 
 pointer: POINTER+ variable;
 
