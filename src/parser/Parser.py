@@ -65,6 +65,7 @@ class Parser:
                         AddressNode,
                         ReturnNode,
                         NotNode,
+                        PointerNode,
                         IntPointerNode,
                         FloatPointerNode,
                         CharPointerNode,
@@ -528,6 +529,8 @@ class ASTVisitor(CVisitor):
         match node.symbol.type:
             case CParser.INT:
                 return IntNode(text, line_nr=node.symbol.line)
+            case CParser.POINTER:
+                return PointerNode(text, line_nr=node.symbol.line)
             case CParser.FLOAT:
                 return FloatNode(text, line_nr=node.symbol.line)
             case CParser.STRING:

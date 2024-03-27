@@ -96,6 +96,9 @@ def node_to_symbolTableEntryType(
         return SymbolTableEntryType.Bool
     if isinstance(node, AddressNode):
         return node_to_symbolTableEntryType(node.children[0], symbol_table)
+    if isinstance(node, PointerNode):
+        # dereference!
+        return node_to_symbolTableEntryType(node.children[0], symbol_table)
 
     raise ValueError(f"Invalid node type: {node.__class__.__name__}")
 
