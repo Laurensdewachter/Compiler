@@ -60,8 +60,8 @@ printf: PRINTF LPAREN STRING (COMMA expr)* RPAREN;
 main: TYPE 'main' LPAREN RPAREN LBRACKET stat* RBRACKET;
 
 newVariable:
-	CONST* (TYPE | ID) variable
-	| CONST* (TYPE | ID) variable '=' expr
+	CONST* (TYPE | ID) ('(' TYPE ')')? variable
+	| CONST* (TYPE | ID) variable '=' ('(' TYPE ')')? expr
 	| CONST* (TYPE | ID) pointer '=' address
 	| CONST* (TYPE | ID) pointer '=' expr;
 
@@ -70,8 +70,8 @@ pointer: POINTER+ variable;
 address: AMPERSAND ID;
 
 assignment:
-	ID '=' expr
-	| expr '=' expr;
+	ID '=' ('(' TYPE ')')? expr
+	| expr '=' ('(' TYPE ')')? expr;
 
 TYPE: 'int' | 'float' | 'char' | 'string' | 'bool' | 'void';
 

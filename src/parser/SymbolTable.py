@@ -101,6 +101,20 @@ def node_to_symbolTableEntryType(
     if isinstance(node, AssignNode):
         # e.g. int a = number++;
         return node_to_symbolTableEntryType(node.children[0], symbol_table)
+    if isinstance(node, ConvertNode):
+        return node_to_symbolTableEntryType(node.children[0], symbol_table)
+    if isinstance(node, TypeNode):
+        match node.value:
+            case "int":
+                return SymbolTableEntryType.Int
+            case "float":
+                return SymbolTableEntryType.Float
+            case "char":
+                return SymbolTableEntryType.Char
+            case "bool":
+                return SymbolTableEntryType.Bool
+            case _:
+                raise ValueError(f"Invalid type: {node.value}")
 
     raise ValueError(f"Invalid node type: {node.__class__.__name__}")
 
@@ -134,8 +148,11 @@ class SymbolTable:
         if isinstance(tree, NewVariableNode):
             # Check for constant
             type_node_idx = 0
-            if len(tree.children) == 4:
+            explicit_convert = False
+            if isinstance(tree.children[0], ConstNode):
                 type_node_idx = 1
+            if isinstance(tree.children[2], TypeNode):
+                explicit_convert = True
 
             # Check for pointer
             id_node = tree.children[type_node_idx + 1]
@@ -153,7 +170,7 @@ class SymbolTable:
                 SymbolTableEntry(
                     id_node.value,
                     node_to_symbolTableEntryType(
-                        tree.children[type_node_idx + 2], self
+                        tree.children[type_node_idx + 2 + explicit_convert], self
                     ),
                     len(tree.children) == 4,
                     id_node.line_nr,

@@ -9,6 +9,10 @@ class ProgNode(TreeNode):
     def __init__(self, children=None, line_nr: int = -1) -> None:
         super().__init__("Prog", children=children, line_nr=line_nr)
 
+class ConvertNode(TreeNode):
+    def __init__(self, children=None, line_nr: int = -1):
+        super().__init__("Convert", children=children, line_nr=line_nr)
+
 
 class EqualNode(TreeNode):
     def __init__(self, children=None, line_nr: int = -1):

@@ -501,9 +501,15 @@ class ASTVisitor(CVisitor):
             if isinstance(children[0], MinusNode) and children[0].children == []:
                 try:
                     if isinstance(children[1].children[0].children[0], IntNode):
-                        return IntNode("-" + children[1].children[0].children[0].value, line_nr=children[1].line_nr)
+                        return IntNode(
+                            "-" + children[1].children[0].children[0].value,
+                            line_nr=children[1].line_nr,
+                        )
                     if isinstance(children[1].children[0].children[0], FloatNode):
-                        return FloatNode("-" + children[1].children[0].children[0].value, line_nr=children[1].line_nr)
+                        return FloatNode(
+                            "-" + children[1].children[0].children[0].value,
+                            line_nr=children[1].line_nr,
+                        )
                 except:
                     pass
 
@@ -560,20 +566,14 @@ class ASTVisitor(CVisitor):
             if cstChild is None:
                 continue
             children.append(cstChild)
-
-        type_node = children[0]
-        pointer_node = children[1]
-        pointer_idx = 1
-        if isinstance(children[0], ConstNode):
-            type_node = children[1]
-            pointer_node = children[2]
-            pointer_idx = 2
+        const_node = isinstance(children[0], ConstNode)
+        explicit_conversion = isinstance(children[2 + const_node], TypeNode)
+        type_node = children[0 + const_node]
+        pointer_node = children[1 + const_node]
+        pointer_idx = 1 + const_node
         if self.typedefs.get(type_node.value):
             type = self.typedefs.get(type_node.value)
-            if isinstance(children[0], ConstNode):
-                children[1] = TypeNode(type, line_nr=type_node.line_nr)
-            else:
-                children[0] = TypeNode(type, line_nr=type_node.line_nr)
+            children[0 + const_node] = TypeNode(type, line_nr=type_node.line_nr)
         if isinstance(pointer_node, PointerNode):
             match type_node.value:
                 case "int":
@@ -597,6 +597,12 @@ class ASTVisitor(CVisitor):
                     )
                     type_node.value = "bool*"
 
+        if explicit_conversion:
+            type = children[2 + const_node]
+            children.pop(2 + const_node)
+            children[2 + const_node] = ConvertNode(
+                children=[type, children[2 + const_node]], line_nr=type.line_nr
+            )
         return NewVariableNode(line_nr=ctx.start.line, children=children)
 
     def visitPointer(self, ctx: CParser.PointerContext) -> PointerNode:

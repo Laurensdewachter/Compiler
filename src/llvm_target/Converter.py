@@ -108,6 +108,18 @@ def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
                     return ir.IntType(8)
                 case _:
                     raise Exception(f"Unknown type: {symbol_table_type}")
+        case ConvertNode():
+            match node.children[0].value:
+                case "int":
+                    return ir.IntType(32)
+                case "float":
+                    return ir.FloatType()
+                case "char":
+                    return ir.IntType(8)
+                case "bool":
+                    return ir.IntType(1)
+                case _:
+                    raise ValueError(f"Invalid type: {node.children[0].value}")
         case _:
             raise Exception(f"Unknown type: {node}")
 
@@ -350,6 +362,158 @@ class LlvmConverter:
                 value = value.children[1]
                 self.store_value(value, llvm_var)
 
+            case ConvertNode():
+                to_type: str = value.children[0].value
+                from_type = None
+                match value.children[1]:
+                    case IdNode():
+                        from_type = self.symbol_table.find_entry(
+                            value.children[1].value
+                        ).type
+                        match from_type:
+                            case SymbolTableEntryType.Int:
+                                from_type = ir.IntType(32)
+                            case SymbolTableEntryType.Float:
+                                from_type = ir.FloatType()
+                            case SymbolTableEntryType.Char:
+                                from_type = ir.IntType(8)
+                            case SymbolTableEntryType.Bool:
+                                from_type = ir.IntType(1)
+                    case PlusNode():
+                        from_type = node_to_llvmtype(
+                            value.children[1], self.symbol_table
+                        )
+                    case MultNode():
+                        from_type = node_to_llvmtype(
+                            value.children[1], self.symbol_table
+                        )
+                    case DivNode():
+                        from_type = node_to_llvmtype(
+                            value.children[1], self.symbol_table
+                        )
+                    case MinusNode():
+                        from_type = node_to_llvmtype(
+                            value.children[1], self.symbol_table
+                        )
+
+                    case _:
+                        raise Exception(f"from type?? : {value.children[1]}")
+
+                if to_type == "int":
+                    match from_type:
+                        case ir.IntType(32):
+                            builder.store(
+                                builder.zext(
+                                    self.node_to_llvm(value.children[1]), ir.IntType(32)
+                                ),
+                                llvm_var,
+                            )
+                        case ir.FloatType():
+                            builder.store(
+                                builder.fptosi(
+                                    self.node_to_llvm(value.children[1]), ir.IntType(32)
+                                ),
+                                llvm_var,
+                            )
+                        case ir.IntType(8):
+                            builder.store(
+                                builder.zext(
+                                    self.node_to_llvm(value.children[1]), ir.IntType(32)
+                                ),
+                                llvm_var,
+                            )
+                        case ir.IntType(1):
+                            builder.store(
+                                builder.zext(
+                                    self.node_to_llvm(value.children[1]), ir.IntType(32)
+                                ),
+                                llvm_var,
+                            )
+                if to_type == "float":
+                    match from_type:
+                        case ir.IntType():
+                            builder.store(
+                                builder.sitofp(
+                                    self.node_to_llvm(value.children[1]), ir.FloatType()
+                                ),
+                                llvm_var,
+                            )
+                        case ir.FloatType():
+                            builder.store(
+                                self.node_to_llvm(value.children[1]),
+                                llvm_var,
+                            )
+                        case ir.IntType(8):
+                            builder.store(
+                                builder.sitofp(
+                                    self.node_to_llvm(value.children[1]), ir.FloatType()
+                                ),
+                                llvm_var,
+                            )
+                        case ir.IntType(1):
+                            builder.store(
+                                builder.sitofp(
+                                    self.node_to_llvm(value.children[1]), ir.FloatType()
+                                ),
+                                llvm_var,
+                            )
+                if to_type == "char":
+                    match from_type:
+                        case ir.IntType(32):
+                            builder.store(
+                                builder.trunc(
+                                    self.node_to_llvm(value.children[1]), ir.IntType(8)
+                                ),
+                                llvm_var,
+                            )
+                        case ir.FloatType():
+                            builder.store(
+                                builder.trunc(
+                                    self.node_to_llvm(value.children[1]), ir.IntType(8)
+                                ),
+                                llvm_var,
+                            )
+                        case ir.IntType(8):
+                            builder.store(
+                                self.node_to_llvm(value.children[1]),
+                                llvm_var,
+                            )
+                        case ir.IntType(1):
+                            builder.store(
+                                builder.trunc(
+                                    self.node_to_llvm(value.children[1]), ir.IntType(8)
+                                ),
+                                llvm_var,
+                            )
+                if to_type == "bool":
+                    match from_type:
+                        case ir.IntType(32):
+                            builder.store(
+                                builder.trunc(
+                                    self.node_to_llvm(value.children[1]), ir.IntType(1)
+                                ),
+                                llvm_var,
+                            )
+                        case ir.FloatType():
+                            builder.store(
+                                builder.trunc(
+                                    self.node_to_llvm(value.children[1]), ir.IntType(1)
+                                ),
+                                llvm_var,
+                            )
+                        case ir.IntType(8):
+                            builder.store(
+                                builder.trunc(
+                                    self.node_to_llvm(value.children[1]), ir.IntType(1)
+                                ),
+                                llvm_var,
+                            )
+                        case ir.IntType(1):
+                            builder.store(
+                                self.node_to_llvm(value.children[1]),
+                                llvm_var,
+                            )
+
             case _:
                 raise Exception(f"Unknown type at Generation of assignment: {value}")
 
@@ -496,6 +660,13 @@ class LlvmConverter:
             var = builder.gep(left_llvm, [right_llvm])
             return var
 
+        if (
+            left_llvm.type.intrinsic_name == "f32"
+            or right_llvm.type.intrinsic_name == "f32"
+        ):
+            var = builder.fadd(left_llvm, right_llvm)
+            return var
+
         var = builder.add(left_llvm, right_llvm)
 
         return var
@@ -513,8 +684,14 @@ class LlvmConverter:
         left_llvm = self.node_to_llvm(left)
         right_llvm = self.node_to_llvm(right)
 
-        var = builder.mul(left_llvm, right_llvm)
+        if (
+            left_llvm.type.intrinsic_name == "f32"
+            or right_llvm.type.intrinsic_name == "f32"
+        ):
+            var = builder.fmul(left_llvm, right_llvm)
+            return var
 
+        var = builder.mul(left_llvm, right_llvm)
         return var
 
     def division(self, node: TreeNode) -> ir.Value:
@@ -529,6 +706,13 @@ class LlvmConverter:
 
         left_llvm = self.node_to_llvm(left)
         right_llvm = self.node_to_llvm(right)
+
+        if (
+            left_llvm.type.intrinsic_name == "f32"
+            or right_llvm.type.intrinsic_name == "f32"
+        ):
+            var = builder.fdiv(left_llvm, right_llvm)
+            return var
 
         var = builder.udiv(left_llvm, right_llvm)
 
@@ -553,6 +737,13 @@ class LlvmConverter:
             var = builder.gep(left_llvm, [right_llvm])
             return var
         right_llvm = self.node_to_llvm(right)
+
+        if (
+            left_llvm.type.intrinsic_name == "f32"
+            or right_llvm.type.intrinsic_name == "f32"
+        ):
+            var = builder.fsub(left_llvm, right_llvm)
+            return var
 
         var = builder.sub(left_llvm, right_llvm)
 
