@@ -67,6 +67,8 @@ def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
             return ir.IntType(1)
         case LShiftNode():
             return ir.IntType(32)
+        case AssignNode():
+            return node_to_llvmtype(node.children[1], symbol_table)
         case RShiftNode():
             return ir.IntType(32)
         case EqualNode():
@@ -157,7 +159,7 @@ class LlvmConverter:
         match value:
             case IntNode():
                 pointer_depth = llvm_var.type.intrinsic_name.count("p0")
-                if pointer_depth == 0:
+                if pointer_depth >= 1:
                     builder.store(
                         ir.Constant(ir.IntType(32), int(value.value)), llvm_var
                     )
@@ -337,10 +339,16 @@ class LlvmConverter:
                 for _ in range(pointer_depth - 1):
                     pointee = builder.load(pointee)
                 builder.store(builder.load(pointee), llvm_var)
+
+            case AssignNode():
+                # e.g. int a = number++;
+                value = value.children[1]
+                self.store_value(value, llvm_var)
+
             case _:
                 raise Exception(f"Unknown type at Generation of assignment: {value}")
 
-    def node_to_llvm(self, node: TreeNode) -> ir.Value:
+    def node_to_llvm(self, node: TreeNode, load: bool = True) -> ir.Value:
         """
         Convert a TreeNode to a llvmlite ir.Value
         The value is also immediately saved in the llvm code
@@ -354,7 +362,11 @@ class LlvmConverter:
             case FloatNode():
                 return ir.Constant(ir.FloatType(), float(node.value))
             case IdNode():
-                return builder.load(self.symbol_table.find_entry(node.value).llvm_var)
+                if load:
+                    return builder.load(
+                        self.symbol_table.find_entry(node.value).llvm_var
+                    )
+                return self.symbol_table.find_entry(node.value).llvm_var
             case PointerNode():
                 # dereference, check pointer depth!
                 pointer_depth = node.depth
@@ -452,6 +464,13 @@ class LlvmConverter:
                 child = node.children[0]
                 symbol_table_entry = self.symbol_table.find_entry(child.value)
                 return symbol_table_entry.llvm_var
+            case AssignNode():
+                left = node.children[0]
+                right = node.children[1]
+                left_llvm = self.node_to_llvm(left, load=False)
+                right_llvm = self.node_to_llvm(right)
+                builder.store(right_llvm, left_llvm)
+                return right_llvm
             case _:
                 raise Exception(f"Unknown type: {node}")
 
@@ -550,6 +569,8 @@ class LlvmConverter:
                 self.builders.append(ir.IRBuilder(self.blocks[-1]))
 
             case AssignNode():
+                if node.converted:
+                    return
                 if isinstance(node.children[0], PointerNode):
                     # dereference pointer
                     pointer_depth = node.children[0].depth
@@ -564,6 +585,11 @@ class LlvmConverter:
                         node.children[0].value
                     ).llvm_var
                 value = node.children[1]
+
+                # make sure we dont do assignment twice when doing something like int a = number++;
+                node.converted = True
+                if isinstance(value, AssignNode):
+                    value.converted = True
 
                 self.store_value(value, assignee)
 

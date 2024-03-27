@@ -53,6 +53,7 @@ class VariableNode(TreeNode):
 class AssignNode(TreeNode):
     def __init__(self, children=None, line_nr: int = -1) -> None:
         super().__init__("Assignment", children=children, line_nr=line_nr)
+        self.converted = False
 
 
 class NewVariableNode(TreeNode):
