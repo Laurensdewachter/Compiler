@@ -105,7 +105,7 @@ DSLASH: '/' '/';
 CHAR: SQUOTE . SQUOTE | SQUOTE '\\' . SQUOTE;
 BOOL: 'true' | 'false';
 FLOAT: [-]?[0-9]* '.' [0-9]*;
-INT: ('-')? [0-9]+; // TODO: handle '+' before an integer
+INT: ('-')? [0] | [1-9][0-9]*; // TODO: handle '+' before an integer
 STRING: ["] .*? ["];
 LSHIFT: '<<';
 RSHIFT: '>>';
