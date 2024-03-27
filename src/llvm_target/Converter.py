@@ -26,8 +26,49 @@ def node_to_llvmtype(node: TreeNode, symbol_table: SymbolTable) -> ir.Type:
             return node_to_llvmtype(node.children[0], symbol_table)
         case MinusNode():
             return node_to_llvmtype(node.children[0], symbol_table)
+        case AddressNode():
+            child = node.children[0]
+            symbol_table_type = symbol_table.find_entry(child.value).type
+            match symbol_table_type:
+                case SymbolTableEntryType.Int:
+                    return ir.IntType(32)
+                case SymbolTableEntryType.Float:
+                    return ir.FloatType()
+                case SymbolTableEntryType.String:
+                    return ir.ArrayType(ir.IntType(8), 0)
+                case SymbolTableEntryType.Bool:
+                    return ir.IntType(1)
+                case SymbolTableEntryType.Char:
+                    return ir.IntType(8)
+                case _:
+                    raise Exception(f"Unknown type: {symbol_table_type}")
+        case PointerNode():
+            # dereference!
+            return node_to_llvmtype(node.children[0], symbol_table)
+        case FloatPointerNode():
+            type = ir.FloatType().as_pointer()
+            for _ in range(node.depth - 1):
+                type = type.as_pointer()
+            return ir.FloatType()
+        case IntPointerNode():
+            type = ir.IntType(32).as_pointer()
+            for _ in range(node.depth - 1):
+                type = type.as_pointer()
+            return ir.IntType(32)
+        case CharPointerNode():
+            type = ir.IntType(8).as_pointer()
+            for _ in range(node.depth - 1):
+                type = type.as_pointer()
+            return ir.IntType(8)
+        case BoolPointerNode():
+            type = ir.IntType(1).as_pointer()
+            for _ in range(node.depth - 1):
+                type = type.as_pointer()
+            return ir.IntType(1)
         case LShiftNode():
             return ir.IntType(32)
+        case AssignNode():
+            return node_to_llvmtype(node.children[1], symbol_table)
         case RShiftNode():
             return ir.IntType(32)
         case EqualNode():
@@ -77,9 +118,14 @@ class LlvmConverter:
         self.builders = []
 
         # Get the target triple using llvm-config
-        target_triple = (
-            subprocess.check_output(["llvm-config", "--host-target"]).decode().strip()
-        )
+        try:
+            target_triple = (
+                subprocess.check_output(["llvm-config", "--host-target"])
+                .decode()
+                .strip()
+            )
+        except:
+            target_triple = ""
         self.module = ir.Module("module")
         self.module.triple = target_triple
         self.input_file_lines = open(input_file_path).readlines()
@@ -106,7 +152,7 @@ class LlvmConverter:
         line = self.input_file_lines[node.line_nr - 1].strip()
         builder.comment(f"Line {node.line_nr}: {line}")
 
-    def store_value(self, value: TreeNode, llvm_var: ir.Value) -> None:
+    def store_value(self, value: TreeNode, llvm_var: ir.Value, depth: int = 0) -> None:
         """
         Store the value of a node in a llvm variable
         :param value: TreeNode to store
@@ -117,7 +163,15 @@ class LlvmConverter:
 
         match value:
             case IntNode():
-                builder.store(ir.Constant(ir.IntType(32), int(value.value)), llvm_var)
+                pointer_depth = llvm_var.type.intrinsic_name.count("p0")
+                if pointer_depth <= 1:
+                    builder.store(
+                        ir.Constant(ir.IntType(32), int(value.value)), llvm_var
+                    )
+                else:
+                    builder.gep(
+                        llvm_var, [ir.Constant(ir.IntType(32), int(value.value))]
+                    )
             case FloatNode():
                 builder.store(ir.Constant(ir.FloatType(), float(value.value)), llvm_var)
             case StringNode():
@@ -129,14 +183,39 @@ class LlvmConverter:
                     llvm_var,
                 )
             case CharNode():
+                if len(value.value) == 4:
+                    # escape character e.g. '\\n'
+                    value.value = value.value.encode("utf-8").decode("unicode_escape")
+
                 builder.store(
                     ir.Constant(ir.IntType(8), ord(value.value[1:-1])), llvm_var
                 )
             case IdNode():
+                if depth != 0:
+                    # find variable depth
+                    variable_depth = llvm_var.type.intrinsic_name.count("p0")
+                    # find value depth
+                    value_depth = self.symbol_table.find_entry(
+                        value.value
+                    ).llvm_var.type.intrinsic_name.count("p0")
+                    var = self.symbol_table.find_entry(value.value).llvm_var
+                    for _ in range(variable_depth - value_depth + 1):
+                        var = builder.load(var)
+                    builder.store(var, llvm_var)
+                    return
                 builder.store(
                     builder.load(self.symbol_table.find_entry(value.value).llvm_var),
                     llvm_var,
                 )
+            case AddressNode():
+                child = value.children[0]
+                # check for pointer depth
+                pointer_depth = depth
+
+                symbol_table_entry = self.symbol_table.find_entry(child.value)
+                symbol_table_llvm_var = symbol_table_entry.llvm_var
+                var = symbol_table_llvm_var
+                builder.store(var, llvm_var)
             case PlusNode():
                 builder.store(self.addition(value), llvm_var)
             case MultNode():
@@ -168,7 +247,20 @@ class LlvmConverter:
             case NeqNode():
                 left = self.node_to_llvm(value.children[0])
                 right = self.node_to_llvm(value.children[1])
-                type = self.symbol_table.find_entry(value.children[0].value).type
+                try:
+                    type = self.symbol_table.find_entry(value.children[0].value).type
+                except:
+                    # address node
+                    address_to = self.symbol_table.find_entry(
+                        value.children[0].children[0].value
+                    )
+                    addres_to_llvm_var = address_to.llvm_var
+
+                    builder.store(
+                        builder.icmp_signed("!=", addres_to_llvm_var, right), llvm_var
+                    )
+                    return
+
                 if type == SymbolTableEntryType.Int:
                     builder.store(builder.icmp_signed("!=", left, right), llvm_var)
                 elif type == SymbolTableEntryType.Float:
@@ -242,10 +334,26 @@ class LlvmConverter:
             case NotNode():
                 child = self.node_to_llvm(value.children[0])
                 builder.store(builder.not_(child), llvm_var)
+            case PointerNode():
+                # dereference
+                pointer_depth = value.depth
+                pointer_loc = self.symbol_table.find_entry(
+                    value.children[0].value
+                ).llvm_var
+                pointee = builder.load(pointer_loc)
+                for _ in range(pointer_depth - 1):
+                    pointee = builder.load(pointee)
+                builder.store(builder.load(pointee), llvm_var)
+
+            case AssignNode():
+                # e.g. int a = number++;
+                value = value.children[1]
+                self.store_value(value, llvm_var)
+
             case _:
                 raise Exception(f"Unknown type at Generation of assignment: {value}")
 
-    def node_to_llvm(self, node: TreeNode) -> ir.Value:
+    def node_to_llvm(self, node: TreeNode, load: bool = True) -> ir.Value:
         """
         Convert a TreeNode to a llvmlite ir.Value
         The value is also immediately saved in the llvm code
@@ -259,7 +367,21 @@ class LlvmConverter:
             case FloatNode():
                 return ir.Constant(ir.FloatType(), float(node.value))
             case IdNode():
-                return builder.load(self.symbol_table.find_entry(node.value).llvm_var)
+                if load:
+                    return builder.load(
+                        self.symbol_table.find_entry(node.value).llvm_var
+                    )
+                return self.symbol_table.find_entry(node.value).llvm_var
+            case PointerNode():
+                # dereference, check pointer depth!
+                pointer_depth = node.depth
+                pointer_loc = self.symbol_table.find_entry(
+                    node.children[0].value
+                ).llvm_var
+                pointee = builder.load(pointer_loc)
+                for _ in range(pointer_depth - 1):
+                    pointee = builder.load(pointee)
+                return builder.load(pointee)
             case PlusNode():
                 return self.addition(node)
             case MultNode():
@@ -343,6 +465,17 @@ class LlvmConverter:
                 return builder.not_(child)
             case CharNode():
                 return ir.Constant(ir.IntType(8), ord(node.value[1:-1]))
+            case AddressNode():
+                child = node.children[0]
+                symbol_table_entry = self.symbol_table.find_entry(child.value)
+                return symbol_table_entry.llvm_var
+            case AssignNode():
+                left = node.children[0]
+                right = node.children[1]
+                left_llvm = self.node_to_llvm(left, load=False)
+                right_llvm = self.node_to_llvm(right)
+                builder.store(right_llvm, left_llvm)
+                return right_llvm
             case _:
                 raise Exception(f"Unknown type: {node}")
 
@@ -358,6 +491,10 @@ class LlvmConverter:
 
         left_llvm = self.node_to_llvm(left)
         right_llvm = self.node_to_llvm(right)
+
+        if left_llvm.type.intrinsic_name.count("p0") != 0:
+            var = builder.gep(left_llvm, [right_llvm])
+            return var
 
         var = builder.add(left_llvm, right_llvm)
 
@@ -408,6 +545,13 @@ class LlvmConverter:
         right = node.children[1]
 
         left_llvm = self.node_to_llvm(left)
+
+        # check for pointers
+        if left_llvm.type.intrinsic_name.count("p0") != 0:
+            right.value = str(-int(right.value))
+            right_llvm = self.node_to_llvm(right)
+            var = builder.gep(left_llvm, [right_llvm])
+            return var
         right_llvm = self.node_to_llvm(right)
 
         var = builder.sub(left_llvm, right_llvm)
@@ -430,16 +574,64 @@ class LlvmConverter:
                 self.builders.append(ir.IRBuilder(self.blocks[-1]))
 
             case AssignNode():
-                assignee = self.symbol_table.find_entry(node.children[0].value).llvm_var
+                if node.converted:
+                    return
+                if isinstance(node.children[0], PointerNode):
+                    # dereference pointer
+                    pointer_depth = node.children[0].depth
+                    pointee = self.symbol_table.find_entry(
+                        node.children[0].children[0].value
+                    ).llvm_var
+                    for _ in range(pointer_depth - 1):
+                        pointee = self.builders[-1].load(pointee)
+                    assignee = self.builders[-1].load(pointee)
+                else:
+                    assignee = self.symbol_table.find_entry(
+                        node.children[0].value
+                    ).llvm_var
                 value = node.children[1]
+
+                # make sure we dont do assignment twice when doing something like int a = number++;
+                node.converted = True
+                if isinstance(value, AssignNode):
+                    value.converted = True
 
                 self.store_value(value, assignee)
 
             case NewVariableNode():
                 const_var: bool = len(node.children) == 4
-                var_name = (
-                    node.children[2].value if const_var else node.children[1].value
-                )
+                pointer_depth = 0
+                if const_var:
+                    if isinstance(
+                        node.children[2],
+                        (
+                            IntPointerNode,
+                            FloatPointerNode,
+                            CharPointerNode,
+                            BoolPointerNode,
+                        ),
+                    ):
+                        # take pointer depth in accoun
+                        var_node = node.children[2]
+                        pointer_depth = var_node.depth
+                        var_name = var_node.children[0].value
+                    else:
+                        var_name = node.children[2].value
+                else:
+                    if isinstance(
+                        node.children[1],
+                        (
+                            IntPointerNode,
+                            FloatPointerNode,
+                            CharPointerNode,
+                            BoolPointerNode,
+                        ),
+                    ):
+                        var_node = node.children[1]
+                        pointer_depth = var_node.depth
+                        var_name = var_node.children[0].value
+                    else:
+                        var_name = node.children[1].value
 
                 try:
                     builder = self.builders[-1]
@@ -467,14 +659,24 @@ class LlvmConverter:
                     return
 
                 symbol_table_entry = self.symbol_table.find_entry(var_name)
-
                 var_type = node_to_llvmtype(node.children[2], self.symbol_table)
+
+                for _ in range(pointer_depth):
+                    var_type = var_type.as_pointer()
+
                 var = builder.alloca(var_type, name=var_name)
 
                 symbol_table_entry.llvm_var = var
                 value = node.children[3] if const_var else node.children[2]
 
-                self.store_value(value, var)
+                # check if value is a pointer
+                try:
+                    self.store_value(value, var, depth=pointer_depth)
+                except:
+                    # and with integers
+                    var = builder.alloca(ir.IntType(32), name=var_name)
+                    symbol_table_entry.llvm_var = var
+                    self.store_value(value, var, depth=pointer_depth)
 
             case PrintfNode():
                 builder = self.builders[-1]
@@ -513,8 +715,10 @@ class LlvmConverter:
                 comment_value = node.value[2:]
                 # split comment into multiple lines
                 comment_lines = comment_value.split("\n")
-
-                builder = self.builders[-1]
+                try:
+                    builder = self.builders[-1]
+                except:
+                    return
                 for comment_line in comment_lines:
                     if comment_line.strip() == "*/" or comment_line == "":
                         continue

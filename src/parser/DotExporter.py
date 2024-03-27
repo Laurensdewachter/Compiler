@@ -10,7 +10,7 @@ class DotExporter:
     def export(tree: TreeNode, output_path: str) -> None:
         g = gv.Digraph(format="png")
         DotExporter._export(g, tree)
-        g.render(output_path.replace(".dot", ""), view=True)
+        g.render(output_path.replace(".dot", ""), view=False)
 
     @staticmethod
     def _export(g: gv.Digraph, tree: TreeNode) -> None:

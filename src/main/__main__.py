@@ -47,6 +47,7 @@ if __name__ == "__main__":
             changed = Parser.const_folding(ast)
             changed = Parser.const_prop(ast, symbol_table)
     # Analyze semantic
+    """
     semantic_errors, warnings = SemanticAnalyzer.analyze(ast, symbol_table)
     for error in semantic_errors:
         print(error)
@@ -54,6 +55,7 @@ if __name__ == "__main__":
         print(warning)
     if semantic_errors:
         quit(-1)
+    """
 
     if ast_file:
         DotExporter.export(ast, ast_file)

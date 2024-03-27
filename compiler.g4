@@ -12,7 +12,11 @@ stat:
 	| newVariable SEMI
     | assignment SEMI
     | LINE_COMMENT
-    | COMMENT;
+    | COMMENT
+    | typedef;
+
+typedef: TYPEDEF TYPE typedefname SEMI;
+typedefname: ID | TYPE;
 
 expr:
 	expr ('*') expr
@@ -55,9 +59,10 @@ printf: PRINTF LPAREN STRING (COMMA expr)* RPAREN;
 main: TYPE 'main' LPAREN RPAREN LBRACKET stat* RBRACKET;
 
 newVariable:
-	CONST* TYPE variable
-	| CONST* TYPE variable '=' expr
-	| CONST* TYPE pointer '=' address;
+	CONST* (TYPE | ID) variable
+	| CONST* (TYPE | ID) variable '=' expr
+	| CONST* (TYPE | ID) pointer '=' address
+	| CONST* (TYPE | ID) pointer '=' expr;
 
 pointer: POINTER+ variable;
 
@@ -82,24 +87,25 @@ SEMI: ';';
 COMMA: ',';
 IF: 'if';
 WHILE: 'while';
+TYPEDEF: 'typedef';
 ELIF: 'else if';
 ELSE: 'else';
 LBRACKET: '{';
 RBRACKET: '}';
 LPAREN: '(';
 RPAREN: ')';
+CONST: 'const';
+ID: [_a-zA-Z][_a-zA-Z0-9.]*;
 POINTER: '*';
 PLUSPLUS: '++';
 MINUSMINUS: '--';
-CONST: 'const';
 SQUOTE: ['];
 DQUOTE: ["];
 DSLASH: '/' '/';
 CHAR: SQUOTE . SQUOTE | SQUOTE '\\' . SQUOTE;
-ID: [_a-zA-Z][_a-zA-Z0-9.]*;
 BOOL: 'true' | 'false';
 FLOAT: [-]?[0-9]* '.' [0-9]*;
-INT: ('-')? [0-9]+; // TODO: handle '+' before an integer
+INT: ('-')? [0] | [1-9][0-9]*; // TODO: handle '+' before an integer
 STRING: ["] .*? ["];
 LSHIFT: '<<';
 RSHIFT: '>>';

@@ -61,6 +61,7 @@ class Parser:
                         AddressNode,
                         ReturnNode,
                         NotNode,
+                        PointerNode,
                         IntPointerNode,
                         FloatPointerNode,
                         CharPointerNode,
@@ -149,21 +150,27 @@ class Parser:
             elif isinstance(child, GeqNode):
                 new_child = IntNode(
                     str(
-                        int(int(child.children[0].value) <= int(child.children[1].value))
+                        int(
+                            int(child.children[0].value) <= int(child.children[1].value)
+                        )
                     ),
                     line_nr=child.line_nr,
                 )
             elif isinstance(child, LeqNode):
                 new_child = IntNode(
                     str(
-                        int(int(child.children[0].value) <= int(child.children[1].value))
+                        int(
+                            int(child.children[0].value) <= int(child.children[1].value)
+                        )
                     ),
                     line_nr=child.line_nr,
                 )
             elif isinstance(child, NeqNode):
                 new_child = IntNode(
                     str(
-                        int(int(child.children[0].value) != int(child.children[1].value))
+                        int(
+                            int(child.children[0].value) != int(child.children[1].value)
+                        )
                     ),
                     line_nr=child.line_nr,
                 )
@@ -171,14 +178,20 @@ class Parser:
                 if int(child.children[1].value) >= 0:
                     new_child = IntNode(
                         str(
-                            int(int(child.children[0].value) << int(child.children[1].value))
+                            int(
+                                int(child.children[0].value)
+                                << int(child.children[1].value)
+                            )
                         ),
                         line_nr=child.line_nr,
                     )
                 else:
                     new_child = IntNode(
                         str(
-                            int(int(child.children[0].value) >> -int(child.children[1].value))
+                            int(
+                                int(child.children[0].value)
+                                >> -int(child.children[1].value)
+                            )
                         ),
                         line_nr=child.line_nr,
                     )
@@ -186,14 +199,20 @@ class Parser:
                 if int(child.children[1].value) >= 0:
                     new_child = IntNode(
                         str(
-                            int(int(child.children[0].value) >> int(child.children[1].value))
+                            int(
+                                int(child.children[0].value)
+                                >> int(child.children[1].value)
+                            )
                         ),
                         line_nr=child.line_nr,
                     )
                 else:
                     new_child = IntNode(
                         str(
-                            int(int(child.children[0].value) << -int(child.children[1].value))
+                            int(
+                                int(child.children[0].value)
+                                << -int(child.children[1].value)
+                            )
                         ),
                         line_nr=child.line_nr,
                     )
@@ -330,6 +349,11 @@ operator_signs = {
 
 
 class ASTVisitor(CVisitor):
+
+    def __init__(self) -> None:
+        self.typedefs = {}
+        self.visited_main = False
+
     def visitProg(self, ctx: CParser.ProgContext):
         children = []
         for child in ctx.children:
@@ -340,8 +364,18 @@ class ASTVisitor(CVisitor):
 
         return ProgNode(line_nr=ctx.start.line, children=children)
 
+    def visitTypedef(self, ctx: compilerParser.TypedefContext):
+        c_type = ctx.children[1].getText()
+        new_type = ctx.children[2].getText()
+        if new_type in ["int", "float", "char"]:
+            raise Exception(
+                f"Type {new_type} is a reserved keyword and cannot be used as a typedef."
+            )
+        self.typedefs[new_type] = c_type
+
     def visitMain(self, ctx: compilerParser.MainContext):
         children = []
+        self.visited_main = True
         for child in ctx.children:
             cstChild = self.visit(child)
             if cstChild is None:
@@ -524,6 +558,12 @@ class ASTVisitor(CVisitor):
             type_node = children[1]
             pointer_node = children[2]
             pointer_idx = 2
+        if self.typedefs.get(type_node.value):
+            type = self.typedefs.get(type_node.value)
+            if isinstance(children[0], ConstNode):
+                children[1] = TypeNode(type, line_nr=type_node.line_nr)
+            else:
+                children[0] = TypeNode(type, line_nr=type_node.line_nr)
         if isinstance(pointer_node, PointerNode):
             match type_node.value:
                 case "int":
@@ -638,6 +678,8 @@ class ASTVisitor(CVisitor):
         match node.symbol.type:
             case CParser.INT:
                 return IntNode(text, line_nr=node.symbol.line)
+            case CParser.POINTER:
+                return PointerNode(text, line_nr=node.symbol.line)
             case CParser.FLOAT:
                 return FloatNode(text, line_nr=node.symbol.line)
             case CParser.STRING:
