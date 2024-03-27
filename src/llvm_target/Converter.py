@@ -156,7 +156,15 @@ class LlvmConverter:
 
         match value:
             case IntNode():
-                builder.store(ir.Constant(ir.IntType(32), int(value.value)), llvm_var)
+                pointer_depth = llvm_var.type.intrinsic_name.count("p0")
+                if pointer_depth == 0:
+                    builder.store(
+                        ir.Constant(ir.IntType(32), int(value.value)), llvm_var
+                    )
+                else:
+                    builder.gep(
+                        llvm_var, [ir.Constant(ir.IntType(32), int(value.value))]
+                    )
             case FloatNode():
                 builder.store(ir.Constant(ir.FloatType(), float(value.value)), llvm_var)
             case StringNode():
@@ -171,6 +179,7 @@ class LlvmConverter:
                 if len(value.value) == 4:
                     # escape character e.g. '\\n'
                     value.value = value.value.encode("utf-8").decode("unicode_escape")
+
                 builder.store(
                     ir.Constant(ir.IntType(8), ord(value.value[1:-1])), llvm_var
                 )
