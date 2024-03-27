@@ -710,8 +710,10 @@ class LlvmConverter:
                 comment_value = node.value[2:]
                 # split comment into multiple lines
                 comment_lines = comment_value.split("\n")
-
-                builder = self.builders[-1]
+                try:
+                    builder = self.builders[-1]
+                except:
+                    return
                 for comment_line in comment_lines:
                     if comment_line.strip() == "*/" or comment_line == "":
                         continue

@@ -39,7 +39,10 @@ class Parser:
 
         tree: CParser.ProgContext = parser.prog()
 
-        ast = Parser.convert_to_ast(ASTVisitor().visit(tree))
+        visitor = ASTVisitor()
+        ast = Parser.convert_to_ast(visitor.visit(tree))
+        if not visitor.visited_main:
+            raise Exception("Main function not found.")
         if not no_const_prop:
             pass  # TODO: implement constant propagation
         if not no_const_fold:
@@ -224,6 +227,7 @@ class ASTVisitor(CVisitor):
 
     def __init__(self) -> None:
         self.typedefs = {}
+        self.visited_main = False
 
     def visitProg(self, ctx: CParser.ProgContext):
         children = []
@@ -238,10 +242,15 @@ class ASTVisitor(CVisitor):
     def visitTypedef(self, ctx: compilerParser.TypedefContext):
         c_type = ctx.children[1].getText()
         new_type = ctx.children[2].getText()
+        if new_type in ["int", "float", "char"]:
+            raise Exception(
+                f"Type {new_type} is a reserved keyword and cannot be used as a typedef."
+            )
         self.typedefs[new_type] = c_type
 
     def visitMain(self, ctx: compilerParser.MainContext):
         children = []
+        self.visited_main = True
         for child in ctx.children:
             cstChild = self.visit(child)
             if cstChild is None:
