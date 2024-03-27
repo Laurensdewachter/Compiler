@@ -1,5 +1,6 @@
 grammar compiler;
 
+WS: [ \t\n\r]+ -> skip; // toss out whitespace
 /** The start rule; begin parsing here. */
 prog: stat+;
 
@@ -76,7 +77,6 @@ TYPE: 'int' | 'float' | 'char' | 'string' | 'bool' | 'void';
 
 literal: FLOAT | INT | CHAR | STRING | BOOL;
 
-WS: [ \t\n\r]+ -> skip; // toss out whitespace
 INCLUDE: '#include';
 PRINTF: 'printf';
 RETURN: 'return';
